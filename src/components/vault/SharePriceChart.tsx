@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useMemo } from "react";
 import {
   ResponsiveContainer,
   LineChart,
@@ -11,6 +12,16 @@ import {
 } from "recharts";
 import { useVaultHistory } from "@/hooks/useVaultHistory";
 import { Skeleton } from "@/components/ui/Skeleton";
+
+const TIME_RANGES = {
+  "1W": 7,
+  "1M": 30,
+  "3M": 90,
+  "1Y": 365,
+  ALL: Infinity,
+} as const;
+
+type TimeRange = keyof typeof TIME_RANGES;
 
 function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number }>; label?: string }) {
   if (!active || !payload?.[0]) return null;
@@ -26,6 +37,17 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
 
 export function SharePriceChart() {
   const { data, isLoading, isError } = useVaultHistory();
+  const [range, setRange] = useState<TimeRange>("3M");
+
+  const filteredData = useMemo(() => {
+    if (!data?.length) return [];
+    if (range === "ALL") return data;
+
+    const days = TIME_RANGES[range];
+    const latest = data[data.length - 1].timestamp;
+    const cutoff = latest - days * 86_400;
+    return data.filter((d) => d.timestamp >= cutoff);
+  }, [data, range]);
 
   if (isLoading) {
     return (
@@ -47,15 +69,33 @@ export function SharePriceChart() {
     );
   }
 
-  const minPrice = Math.min(...data.map((d) => d.sharePrice));
-  const maxPrice = Math.max(...data.map((d) => d.sharePrice));
+  const chartData = filteredData.length > 0 ? filteredData : data;
+  const minPrice = Math.min(...chartData.map((d) => d.sharePrice));
+  const maxPrice = Math.max(...chartData.map((d) => d.sharePrice));
   const padding = (maxPrice - minPrice) * 0.1 || 0.0001;
 
   return (
     <div className="rounded-xl border border-white/10 bg-white/5 p-6">
-      <h3 className="text-sm font-medium text-gray-400 mb-4">Share Price</h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-medium text-gray-400">Share Price</h3>
+        <div className="flex gap-1">
+          {(Object.keys(TIME_RANGES) as TimeRange[]).map((key) => (
+            <button
+              key={key}
+              onClick={() => setRange(key)}
+              className={`px-2 py-0.5 text-xs rounded transition-colors ${
+                range === key
+                  ? "bg-blue-500/20 text-blue-400"
+                  : "text-gray-500 hover:text-gray-300"
+              }`}
+            >
+              {key}
+            </button>
+          ))}
+        </div>
+      </div>
       <ResponsiveContainer width="100%" height={260}>
-        <LineChart data={data}>
+        <LineChart data={chartData}>
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
           <XAxis
             dataKey="date"
