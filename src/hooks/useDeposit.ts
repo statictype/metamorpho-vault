@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { useAccount, useSendCalls, useCallsStatus } from "wagmi";
 import { useQueryClient } from "@tanstack/react-query";
 import { encodeFunctionData } from "viem";
 import { VAULT_ADDRESS, USDC_ADDRESS, erc20Abi, metaMorphoAbi } from "@/config/contracts";
@@ -11,17 +11,63 @@ import { QUERY_KEYS } from "@/lib/constants";
 
 export function useDeposit() {
   const { address } = useAccount();
-  const { allowance, refetch: refetchAllowance } = useAllowance();
+  const { allowance } = useAllowance();
   const { addToast, removeToast } = useToast();
   const queryClient = useQueryClient();
 
-  const [isPending, setIsPending] = useState(false);
-  const [currentStep, setCurrentStep] = useState<"idle" | "approving" | "depositing">("idle");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [callsId, setCallsId] = useState<string | undefined>(undefined);
+  const confirmToastId = useRef<string | undefined>(undefined);
+  const handledId = useRef<string | undefined>(undefined);
 
-  const { writeContractAsync, data: txHash } = useWriteContract();
-  const { isLoading: isConfirming } = useWaitForTransactionReceipt({
-    hash: txHash,
+  const { sendCallsAsync } = useSendCalls();
+
+  const { data: callsStatus } = useCallsStatus({
+    id: callsId as string,
+    query: {
+      enabled: !!callsId,
+      refetchInterval: (data) =>
+        data.state.data?.status === "success" || data.state.data?.status === "failure"
+          ? false
+          : 1500,
+    },
   });
+
+  // Derive pending/confirming from query data — no setState needed
+  const isConfirming = !!callsId && callsStatus?.status === "pending";
+  const isPending = isSubmitting || isConfirming;
+
+  // Handle confirmation side effects (toasts, cache invalidation) — no setState
+  useEffect(() => {
+    if (!callsId || !callsStatus) return;
+    if (handledId.current === callsId) return; // already handled
+
+    if (callsStatus.status === "success") {
+      handledId.current = callsId;
+      if (confirmToastId.current) removeToast(confirmToastId.current);
+      addToast({
+        id: `${callsId}-ok`,
+        type: "success",
+        title: "Deposit Successful!",
+        description: "Your USDC has been deposited into the vault",
+      });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.userPosition });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.allowance });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.vaultOnChain });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.usdcBalance });
+    }
+
+    if (callsStatus.status === "failure") {
+      handledId.current = callsId;
+      if (confirmToastId.current) removeToast(confirmToastId.current);
+      addToast({
+        id: `${callsId}-fail`,
+        type: "error",
+        title: "Deposit Failed",
+        description: "Transaction reverted on-chain",
+      });
+    }
+  }, [callsId, callsStatus, addToast, removeToast, queryClient]);
 
   const needsApproval = useCallback(
     (amount: bigint) => {
@@ -32,75 +78,69 @@ export function useDeposit() {
   );
 
   const deposit = useCallback(
-    async (amount: bigint) => {
-      if (!address) return;
+    async (amount: bigint): Promise<boolean> => {
+      if (!address) return false;
 
-      setIsPending(true);
+      // Reset from any previous deposit
+      setCallsId(undefined);
+      handledId.current = undefined;
+      confirmToastId.current = undefined;
+      setIsSubmitting(true);
+
       const toastId = `deposit-${Date.now()}`;
 
       try {
-        // Step 1: Approve if needed
+        // Build calls array — batch approve + deposit when needed
+        const calls: { to: `0x${string}`; data: `0x${string}` }[] = [];
+
         if (needsApproval(amount)) {
-          setCurrentStep("approving");
-          addToast({
-            id: toastId,
-            type: "pending",
-            title: "Approving USDC...",
-            description: "Confirm the approval transaction in your wallet",
+          calls.push({
+            to: USDC_ADDRESS,
+            data: encodeFunctionData({
+              abi: erc20Abi,
+              functionName: "approve",
+              args: [VAULT_ADDRESS, amount],
+            }),
           });
-
-          const approveTx = await writeContractAsync({
-            address: USDC_ADDRESS,
-            abi: erc20Abi,
-            functionName: "approve",
-            args: [VAULT_ADDRESS, amount],
-          });
-
-          removeToast(toastId);
-          addToast({
-            id: `${toastId}-approve-ok`,
-            type: "success",
-            title: "USDC Approved",
-            txHash: approveTx,
-          });
-
-          // Wait a moment for state to update
-          await refetchAllowance();
         }
 
-        // Step 2: Deposit
-        setCurrentStep("depositing");
-        const depositToastId = `${toastId}-deposit`;
+        calls.push({
+          to: VAULT_ADDRESS,
+          data: encodeFunctionData({
+            abi: metaMorphoAbi,
+            functionName: "deposit",
+            args: [amount, address],
+          }),
+        });
+
         addToast({
-          id: depositToastId,
+          id: toastId,
           type: "pending",
-          title: "Depositing USDC...",
-          description: "Confirm the deposit transaction in your wallet",
+          title: needsApproval(amount) ? "Approving & Depositing..." : "Depositing USDC...",
+          description: "Confirm the transaction in your wallet",
         });
 
-        const depositTx = await writeContractAsync({
-          address: VAULT_ADDRESS,
-          abi: metaMorphoAbi,
-          functionName: "deposit",
-          args: [amount, address],
+        const result = await sendCallsAsync({
+          calls,
+          experimental_fallback: true,
         });
 
-        removeToast(depositToastId);
+        // Wallet accepted — now track on-chain confirmation
+        removeToast(toastId);
+        const cToastId = `${result.id}-confirming`;
+        confirmToastId.current = cToastId;
         addToast({
-          id: `${depositToastId}-ok`,
-          type: "success",
-          title: "Deposit Successful!",
-          description: "Your USDC has been deposited into the vault",
-          txHash: depositTx,
+          id: cToastId,
+          type: "pending",
+          title: "Confirming deposit...",
+          description: "Waiting for on-chain confirmation",
         });
 
-        // Invalidate queries to refresh data
-        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.userPosition });
-        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.allowance });
-        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.vaultOnChain });
+        setCallsId(result.id);
+        setIsSubmitting(false);
+        return true;
       } catch (error: unknown) {
         removeToast(toastId);
-        removeToast(`${toastId}-deposit`);
 
         const isUserRejection =
           error instanceof Error &&
@@ -118,19 +158,18 @@ export function useDeposit() {
               ? error.message.slice(0, 100)
               : "An unknown error occurred",
         });
-      } finally {
-        setIsPending(false);
-        setCurrentStep("idle");
+
+        setIsSubmitting(false);
+        return false;
       }
     },
-    [address, needsApproval, writeContractAsync, addToast, removeToast, queryClient, refetchAllowance]
+    [address, needsApproval, sendCallsAsync, addToast, removeToast]
   );
 
   return {
     deposit,
     isPending,
     isConfirming,
-    currentStep,
     needsApproval,
   };
 }

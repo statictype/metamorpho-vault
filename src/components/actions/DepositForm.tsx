@@ -5,14 +5,12 @@ import { AmountInput } from "./AmountInput";
 import { ActionButton } from "./ActionButton";
 import { useDeposit } from "@/hooks/useDeposit";
 import { useUsdcBalance } from "@/hooks/useUsdcBalance";
-import { useAllowance } from "@/hooks/useAllowance";
 import { parseUsdcInput } from "@/lib/format";
 
 export function DepositForm() {
   const [amount, setAmount] = useState("");
   const { balance } = useUsdcBalance();
-  const { deposit, isPending, currentStep, needsApproval } = useDeposit();
-  const { allowance } = useAllowance();
+  const { deposit, isPending, isConfirming, needsApproval } = useDeposit();
 
   const parsedAmount = useMemo(() => parseUsdcInput(amount), [amount]);
 
@@ -28,7 +26,7 @@ export function DepositForm() {
     return "Deposit";
   }, [parsedAmount, needsApproval]);
 
-  const pendingLabel = currentStep === "approving" ? "Approving..." : "Depositing...";
+  const pendingLabel = isConfirming ? "Confirming..." : "Depositing...";
 
   const handleSubmit = () => {
     if (!parsedAmount || validationError) return;

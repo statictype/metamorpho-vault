@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { useAccount, useSendCalls, useCallsStatus } from "wagmi";
 import { useQueryClient } from "@tanstack/react-query";
+import { encodeFunctionData } from "viem";
 import { VAULT_ADDRESS, metaMorphoAbi } from "@/config/contracts";
 import { useToast } from "@/components/ui/ToastProvider";
 import { QUERY_KEYS } from "@/lib/constants";
@@ -12,18 +13,69 @@ export function useWithdraw() {
   const { addToast, removeToast } = useToast();
   const queryClient = useQueryClient();
 
-  const [isPending, setIsPending] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [callsId, setCallsId] = useState<string | undefined>(undefined);
+  const confirmToastId = useRef<string | undefined>(undefined);
+  const handledId = useRef<string | undefined>(undefined);
 
-  const { writeContractAsync, data: txHash } = useWriteContract();
-  const { isLoading: isConfirming } = useWaitForTransactionReceipt({
-    hash: txHash,
+  const { sendCallsAsync } = useSendCalls();
+
+  const { data: callsStatus } = useCallsStatus({
+    id: callsId as string,
+    query: {
+      enabled: !!callsId,
+      refetchInterval: (data) =>
+        data.state.data?.status === "success" || data.state.data?.status === "failure"
+          ? false
+          : 1500,
+    },
   });
 
-  const withdraw = useCallback(
-    async (shares: bigint) => {
-      if (!address) return;
+  // Derive pending/confirming from query data — no setState needed
+  const isConfirming = !!callsId && callsStatus?.status === "pending";
+  const isPending = isSubmitting || isConfirming;
 
-      setIsPending(true);
+  // Handle confirmation side effects (toasts, cache invalidation) — no setState
+  useEffect(() => {
+    if (!callsId || !callsStatus) return;
+    if (handledId.current === callsId) return;
+
+    if (callsStatus.status === "success") {
+      handledId.current = callsId;
+      if (confirmToastId.current) removeToast(confirmToastId.current);
+      addToast({
+        id: `${callsId}-ok`,
+        type: "success",
+        title: "Withdrawal Successful!",
+        description: "Your USDC has been withdrawn from the vault",
+      });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.userPosition });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.vaultOnChain });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.usdcBalance });
+    }
+
+    if (callsStatus.status === "failure") {
+      handledId.current = callsId;
+      if (confirmToastId.current) removeToast(confirmToastId.current);
+      addToast({
+        id: `${callsId}-fail`,
+        type: "error",
+        title: "Withdrawal Failed",
+        description: "Transaction reverted on-chain",
+      });
+    }
+  }, [callsId, callsStatus, addToast, removeToast, queryClient]);
+
+  const withdraw = useCallback(
+    async (shares: bigint): Promise<boolean> => {
+      if (!address) return false;
+
+      // Reset from any previous withdrawal
+      setCallsId(undefined);
+      handledId.current = undefined;
+      confirmToastId.current = undefined;
+      setIsSubmitting(true);
+
       const toastId = `withdraw-${Date.now()}`;
 
       try {
@@ -34,25 +86,34 @@ export function useWithdraw() {
           description: "Confirm the transaction in your wallet",
         });
 
-        const tx = await writeContractAsync({
-          address: VAULT_ADDRESS,
-          abi: metaMorphoAbi,
-          functionName: "redeem",
-          args: [shares, address, address],
+        const result = await sendCallsAsync({
+          experimental_fallback: true,
+          calls: [
+            {
+              to: VAULT_ADDRESS,
+              data: encodeFunctionData({
+                abi: metaMorphoAbi,
+                functionName: "redeem",
+                args: [shares, address, address],
+              }),
+            },
+          ],
         });
 
+        // Wallet accepted — now track on-chain confirmation
         removeToast(toastId);
+        const cToastId = `${result.id}-confirming`;
+        confirmToastId.current = cToastId;
         addToast({
-          id: `${toastId}-ok`,
-          type: "success",
-          title: "Withdrawal Successful!",
-          description: "Your USDC has been withdrawn from the vault",
-          txHash: tx,
+          id: cToastId,
+          type: "pending",
+          title: "Confirming withdrawal...",
+          description: "Waiting for on-chain confirmation",
         });
 
-        // Invalidate queries to refresh data
-        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.userPosition });
-        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.vaultOnChain });
+        setCallsId(result.id);
+        setIsSubmitting(false);
+        return true;
       } catch (error: unknown) {
         removeToast(toastId);
 
@@ -72,11 +133,12 @@ export function useWithdraw() {
               ? error.message.slice(0, 100)
               : "An unknown error occurred",
         });
-      } finally {
-        setIsPending(false);
+
+        setIsSubmitting(false);
+        return false;
       }
     },
-    [address, writeContractAsync, addToast, removeToast, queryClient]
+    [address, sendCallsAsync, addToast, removeToast]
   );
 
   return {
