@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, type ReactNode } from "react";
 import type { Toast as ToastType } from "@/types";
 import { Toast } from "./Toast";
 
@@ -21,7 +21,7 @@ export function useToast() {
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastType[]>([]);
 
-  const addToast = useCallback((toast: ToastType) => {
+  const addToast = (toast: ToastType) => {
     setToasts((prev) => [...prev.filter((t) => t.id !== toast.id), toast]);
 
     // Auto-remove success/error toasts after 5s
@@ -30,11 +30,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         setToasts((prev) => prev.filter((t) => t.id !== toast.id));
       }, 5000);
     }
-  }, []);
+  };
 
-  const removeToast = useCallback((id: string) => {
+  const removeToast = (id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
-  }, []);
+  };
 
   return (
     <ToastContext.Provider value={{ addToast, removeToast }}>

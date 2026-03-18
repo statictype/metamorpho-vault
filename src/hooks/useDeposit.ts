@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAccount, useSendCalls, useCallsStatus } from "wagmi";
 import { useQueryClient } from "@tanstack/react-query";
 import { encodeFunctionData } from "viem";
@@ -33,14 +33,14 @@ export function useDeposit() {
     },
   });
 
-  // Derive pending/confirming from query data — no setState needed
+  // Derive pending/confirming from query data
   const isConfirming = !!callsId && callsStatus?.status === "pending";
   const isPending = isSubmitting || isConfirming;
 
-  // Handle confirmation side effects (toasts, cache invalidation) — no setState
+  // Handle confirmation side effects (toasts, cache invalidation)
   useEffect(() => {
     if (!callsId || !callsStatus) return;
-    if (handledId.current === callsId) return; // already handled
+    if (handledId.current === callsId) return;
 
     if (callsStatus.status === "success") {
       handledId.current = callsId;
@@ -69,102 +69,96 @@ export function useDeposit() {
     }
   }, [callsId, callsStatus, addToast, removeToast, queryClient]);
 
-  const needsApproval = useCallback(
-    (amount: bigint) => {
-      if (allowance === undefined) return true;
-      return allowance < amount;
-    },
-    [allowance]
-  );
+  const needsApproval = (amount: bigint) => {
+    if (allowance === undefined) return true;
+    return allowance < amount;
+  };
 
-  const deposit = useCallback(
-    async (amount: bigint): Promise<boolean> => {
-      if (!address) return false;
+  const deposit = async (amount: bigint): Promise<boolean> => {
+    if (!address) return false;
 
-      // Reset from any previous deposit
-      setCallsId(undefined);
-      handledId.current = undefined;
-      confirmToastId.current = undefined;
-      setIsSubmitting(true);
+    // Reset from any previous deposit
+    setCallsId(undefined);
+    handledId.current = undefined;
+    confirmToastId.current = undefined;
+    setIsSubmitting(true);
 
-      const toastId = `deposit-${Date.now()}`;
+    const toastId = `deposit-${Date.now()}`;
 
-      try {
-        // Build calls array — batch approve + deposit when needed
-        const calls: { to: `0x${string}`; data: `0x${string}` }[] = [];
+    try {
+      // Build calls array — batch approve + deposit when needed
+      const calls: { to: `0x${string}`; data: `0x${string}` }[] = [];
 
-        if (needsApproval(amount)) {
-          calls.push({
-            to: USDC_ADDRESS,
-            data: encodeFunctionData({
-              abi: erc20Abi,
-              functionName: "approve",
-              args: [VAULT_ADDRESS, amount],
-            }),
-          });
-        }
-
+      if (needsApproval(amount)) {
         calls.push({
-          to: VAULT_ADDRESS,
+          to: USDC_ADDRESS,
           data: encodeFunctionData({
-            abi: metaMorphoAbi,
-            functionName: "deposit",
-            args: [amount, address],
+            abi: erc20Abi,
+            functionName: "approve",
+            args: [VAULT_ADDRESS, amount],
           }),
         });
-
-        addToast({
-          id: toastId,
-          type: "pending",
-          title: needsApproval(amount) ? "Approving & Depositing..." : "Depositing USDC...",
-          description: "Confirm the transaction in your wallet",
-        });
-
-        const result = await sendCallsAsync({
-          calls,
-          experimental_fallback: true,
-        });
-
-        // Wallet accepted — now track on-chain confirmation
-        removeToast(toastId);
-        const cToastId = `${result.id}-confirming`;
-        confirmToastId.current = cToastId;
-        addToast({
-          id: cToastId,
-          type: "pending",
-          title: "Confirming deposit...",
-          description: "Waiting for on-chain confirmation",
-        });
-
-        setCallsId(result.id);
-        setIsSubmitting(false);
-        return true;
-      } catch (error: unknown) {
-        removeToast(toastId);
-
-        const isUserRejection =
-          error instanceof Error &&
-          (error.message.includes("User rejected") ||
-            error.message.includes("user rejected") ||
-            error.message.includes("ACTION_REJECTED"));
-
-        addToast({
-          id: `${toastId}-error`,
-          type: "error",
-          title: isUserRejection ? "Transaction Rejected" : "Deposit Failed",
-          description: isUserRejection
-            ? "You rejected the transaction in your wallet"
-            : error instanceof Error
-              ? error.message.slice(0, 100)
-              : "An unknown error occurred",
-        });
-
-        setIsSubmitting(false);
-        return false;
       }
-    },
-    [address, needsApproval, sendCallsAsync, addToast, removeToast]
-  );
+
+      calls.push({
+        to: VAULT_ADDRESS,
+        data: encodeFunctionData({
+          abi: metaMorphoAbi,
+          functionName: "deposit",
+          args: [amount, address],
+        }),
+      });
+
+      addToast({
+        id: toastId,
+        type: "pending",
+        title: needsApproval(amount) ? "Approving & Depositing..." : "Depositing USDC...",
+        description: "Confirm the transaction in your wallet",
+      });
+
+      const result = await sendCallsAsync({
+        calls,
+        experimental_fallback: true,
+      });
+
+      // Wallet accepted — now track on-chain confirmation
+      removeToast(toastId);
+      const cToastId = `${result.id}-confirming`;
+      confirmToastId.current = cToastId;
+      addToast({
+        id: cToastId,
+        type: "pending",
+        title: "Confirming deposit...",
+        description: "Waiting for on-chain confirmation",
+      });
+
+      setCallsId(result.id);
+      setIsSubmitting(false);
+      return true;
+    } catch (error: unknown) {
+      removeToast(toastId);
+
+      const isUserRejection =
+        error instanceof Error &&
+        (error.message.includes("User rejected") ||
+          error.message.includes("user rejected") ||
+          error.message.includes("ACTION_REJECTED"));
+
+      addToast({
+        id: `${toastId}-error`,
+        type: "error",
+        title: isUserRejection ? "Transaction Rejected" : "Deposit Failed",
+        description: isUserRejection
+          ? "You rejected the transaction in your wallet"
+          : error instanceof Error
+            ? error.message.slice(0, 100)
+            : "An unknown error occurred",
+      });
+
+      setIsSubmitting(false);
+      return false;
+    }
+  };
 
   return {
     deposit,

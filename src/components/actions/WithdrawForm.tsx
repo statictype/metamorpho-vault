@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { AmountInput } from "./AmountInput";
 import { ActionButton } from "./ActionButton";
 import { useWithdraw } from "@/hooks/useWithdraw";
@@ -16,13 +16,14 @@ export function WithdrawForm() {
   const maxAssets = position?.assets ?? BigInt(0);
   const maxShares = position?.shares ?? BigInt(0);
 
-  const parsedAmount = useMemo(() => parseUsdcInput(amount), [amount]);
+  const parsedAmount = parseUsdcInput(amount);
 
-  const validationError = useMemo(() => {
-    if (!amount || !parsedAmount || parsedAmount === BigInt(0)) return "Enter an amount";
-    if (parsedAmount > maxAssets) return "Exceeds your position";
-    return undefined;
-  }, [amount, parsedAmount, maxAssets]);
+  const validationError =
+    !amount || !parsedAmount || parsedAmount === BigInt(0)
+      ? "Enter an amount"
+      : parsedAmount > maxAssets
+        ? "Exceeds your position"
+        : undefined;
 
   const handleSubmit = async () => {
     if (!parsedAmount || validationError || maxAssets === BigInt(0)) return;

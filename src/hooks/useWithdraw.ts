@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAccount, useSendCalls, useCallsStatus } from "wagmi";
 import { useQueryClient } from "@tanstack/react-query";
 import { encodeFunctionData } from "viem";
@@ -31,11 +31,11 @@ export function useWithdraw() {
     },
   });
 
-  // Derive pending/confirming from query data — no setState needed
+  // Derive pending/confirming from query data
   const isConfirming = !!callsId && callsStatus?.status === "pending";
   const isPending = isSubmitting || isConfirming;
 
-  // Handle confirmation side effects (toasts, cache invalidation) — no setState
+  // Handle confirmation side effects (toasts, cache invalidation)
   useEffect(() => {
     if (!callsId || !callsStatus) return;
     if (handledId.current === callsId) return;
@@ -66,80 +66,77 @@ export function useWithdraw() {
     }
   }, [callsId, callsStatus, addToast, removeToast, queryClient]);
 
-  const withdraw = useCallback(
-    async (shares: bigint): Promise<boolean> => {
-      if (!address) return false;
+  const withdraw = async (shares: bigint): Promise<boolean> => {
+    if (!address) return false;
 
-      // Reset from any previous withdrawal
-      setCallsId(undefined);
-      handledId.current = undefined;
-      confirmToastId.current = undefined;
-      setIsSubmitting(true);
+    // Reset from any previous withdrawal
+    setCallsId(undefined);
+    handledId.current = undefined;
+    confirmToastId.current = undefined;
+    setIsSubmitting(true);
 
-      const toastId = `withdraw-${Date.now()}`;
+    const toastId = `withdraw-${Date.now()}`;
 
-      try {
-        addToast({
-          id: toastId,
-          type: "pending",
-          title: "Withdrawing...",
-          description: "Confirm the transaction in your wallet",
-        });
+    try {
+      addToast({
+        id: toastId,
+        type: "pending",
+        title: "Withdrawing...",
+        description: "Confirm the transaction in your wallet",
+      });
 
-        const result = await sendCallsAsync({
-          experimental_fallback: true,
-          calls: [
-            {
-              to: VAULT_ADDRESS,
-              data: encodeFunctionData({
-                abi: metaMorphoAbi,
-                functionName: "redeem",
-                args: [shares, address, address],
-              }),
-            },
-          ],
-        });
+      const result = await sendCallsAsync({
+        experimental_fallback: true,
+        calls: [
+          {
+            to: VAULT_ADDRESS,
+            data: encodeFunctionData({
+              abi: metaMorphoAbi,
+              functionName: "redeem",
+              args: [shares, address, address],
+            }),
+          },
+        ],
+      });
 
-        // Wallet accepted — now track on-chain confirmation
-        removeToast(toastId);
-        const cToastId = `${result.id}-confirming`;
-        confirmToastId.current = cToastId;
-        addToast({
-          id: cToastId,
-          type: "pending",
-          title: "Confirming withdrawal...",
-          description: "Waiting for on-chain confirmation",
-        });
+      // Wallet accepted — now track on-chain confirmation
+      removeToast(toastId);
+      const cToastId = `${result.id}-confirming`;
+      confirmToastId.current = cToastId;
+      addToast({
+        id: cToastId,
+        type: "pending",
+        title: "Confirming withdrawal...",
+        description: "Waiting for on-chain confirmation",
+      });
 
-        setCallsId(result.id);
-        setIsSubmitting(false);
-        return true;
-      } catch (error: unknown) {
-        removeToast(toastId);
+      setCallsId(result.id);
+      setIsSubmitting(false);
+      return true;
+    } catch (error: unknown) {
+      removeToast(toastId);
 
-        const isUserRejection =
-          error instanceof Error &&
-          (error.message.includes("User rejected") ||
-            error.message.includes("user rejected") ||
-            error.message.includes("ACTION_REJECTED"));
+      const isUserRejection =
+        error instanceof Error &&
+        (error.message.includes("User rejected") ||
+          error.message.includes("user rejected") ||
+          error.message.includes("ACTION_REJECTED"));
 
-        addToast({
-          id: `${toastId}-error`,
-          type: "error",
-          title: isUserRejection ? "Transaction Rejected" : "Withdrawal Failed",
-          description: isUserRejection
-            ? "You rejected the transaction in your wallet"
-            : error instanceof Error
-              ? error.message.slice(0, 100)
-              : "An unknown error occurred",
-        });
+      addToast({
+        id: `${toastId}-error`,
+        type: "error",
+        title: isUserRejection ? "Transaction Rejected" : "Withdrawal Failed",
+        description: isUserRejection
+          ? "You rejected the transaction in your wallet"
+          : error instanceof Error
+            ? error.message.slice(0, 100)
+            : "An unknown error occurred",
+      });
 
-        setIsSubmitting(false);
-        return false;
-      }
-    },
-    [address, sendCallsAsync, addToast, removeToast]
-  );
+      setIsSubmitting(false);
+      return false;
+    }
+  };
 
   return {
     withdraw,

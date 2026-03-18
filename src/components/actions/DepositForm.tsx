@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { AmountInput } from "./AmountInput";
 import { ActionButton } from "./ActionButton";
 import { useDeposit } from "@/hooks/useDeposit";
@@ -12,19 +12,21 @@ export function DepositForm() {
   const { balance } = useUsdcBalance();
   const { deposit, isPending, isConfirming, needsApproval } = useDeposit();
 
-  const parsedAmount = useMemo(() => parseUsdcInput(amount), [amount]);
+  const parsedAmount = parseUsdcInput(amount);
 
-  const validationError = useMemo(() => {
-    if (!amount || !parsedAmount || parsedAmount === BigInt(0)) return "Enter an amount";
-    if (balance !== undefined && parsedAmount > balance) return "Insufficient USDC balance";
-    return undefined;
-  }, [amount, parsedAmount, balance]);
+  const validationError =
+    !amount || !parsedAmount || parsedAmount === BigInt(0)
+      ? "Enter an amount"
+      : balance !== undefined && parsedAmount > balance
+        ? "Insufficient USDC balance"
+        : undefined;
 
-  const buttonLabel = useMemo(() => {
-    if (!parsedAmount) return "Enter an amount";
-    if (needsApproval(parsedAmount)) return "Approve & Deposit";
-    return "Deposit";
-  }, [parsedAmount, needsApproval]);
+  const buttonLabel =
+    !parsedAmount
+      ? "Enter an amount"
+      : needsApproval(parsedAmount)
+        ? "Approve & Deposit"
+        : "Deposit";
 
   const pendingLabel = isConfirming ? "Confirming..." : "Depositing...";
 

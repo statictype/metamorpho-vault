@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import {
   ResponsiveContainer,
   LineChart,
@@ -39,15 +39,11 @@ export function SharePriceChart() {
   const { data, isLoading, isError } = useVaultHistory();
   const [range, setRange] = useState<TimeRange>("3M");
 
-  const filteredData = useMemo(() => {
-    if (!data?.length) return [];
-    if (range === "ALL") return data;
-
-    const days = TIME_RANGES[range];
-    const latest = data[data.length - 1].timestamp;
-    const cutoff = latest - days * 86_400;
-    return data.filter((d) => d.timestamp >= cutoff);
-  }, [data, range]);
+  const days = TIME_RANGES[range];
+  const cutoff = data?.length && range !== "ALL"
+    ? data[data.length - 1].timestamp - days * 86_400
+    : -Infinity;
+  const filteredData = data?.filter((d) => d.timestamp >= cutoff) ?? [];
 
   if (isLoading) {
     return (
