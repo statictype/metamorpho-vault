@@ -30,6 +30,13 @@ export interface UserPosition {
   assets: bigint;
 }
 
+export interface VaultAllocation {
+  type: string;
+  allocation: number;
+  allocationUsd: number | null;
+  label: string;
+}
+
 export type ToastType = "pending" | "success" | "error";
 
 export interface Toast {

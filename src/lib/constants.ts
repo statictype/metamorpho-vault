@@ -7,4 +7,5 @@ export const QUERY_KEYS = {
   usdcBalance: ["user", "usdcBalance"] as const,
   vaultApi: ["vault", "api"] as const,
   vaultHistory: ["vault", "history"] as const,
+  vaultAllocations: ["vault", "allocations"] as const,
 } as const;

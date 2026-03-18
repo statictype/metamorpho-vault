@@ -1,4 +1,4 @@
-import type { VaultApiData, HistoricalDataPoint } from "@/types";
+import type { VaultApiData, HistoricalDataPoint, VaultAllocation } from "@/types";
 
 const MORPHO_API = "https://blue-api.morpho.org/graphql";
 
@@ -135,4 +135,100 @@ export async function fetchVaultHistory(vaultAddress: string): Promise<Historica
       apy: apyMap.get(point.x) ?? 0,
     }))
     .sort((a, b) => a.timestamp - b.timestamp);
+}
+
+// Fetch the vault's market allocations (which Morpho Blue markets it lends to).
+// The `caps` field contains each market/adapter the vault is configured to supply into,
+// along with the current `allocation` (amount deposited, in asset decimals).
+// Cap data is a union: MarketV1CapData has the underlying market pair,
+// AdapterCapData wraps another vault or market via an adapter contract.
+export async function fetchVaultAllocations(vaultAddress: string): Promise<VaultAllocation[]> {
+  const query = `
+    query VaultAllocations($address: String!, $chainId: Int!) {
+      vaultV2ByAddress(address: $address, chainId: $chainId) {
+        totalAssets
+        asset {
+          decimals
+          priceUsd
+        }
+        caps {
+          items {
+            type
+            allocation
+            data {
+              ... on MarketV1CapData {
+                market {
+                  collateralAsset { symbol }
+                  loanAsset { symbol }
+                  lltv
+                }
+              }
+              ... on AdapterCapData {
+                adapter {
+                  type
+                  assets
+                  assetsUsd
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  `;
+
+  type CapItem = {
+    type: string;
+    allocation: number;
+    data: {
+      market?: {
+        collateralAsset: { symbol: string };
+        loanAsset: { symbol: string };
+        lltv: string;
+      };
+      adapter?: {
+        type: string;
+        assets: string;
+        assetsUsd: number | null;
+      };
+    };
+  };
+
+  const data = await gqlFetch<{
+    vaultV2ByAddress: {
+      totalAssets: number;
+      asset: { decimals: number; priceUsd: number };
+      caps: { items: CapItem[] };
+    };
+  }>(query, { address: vaultAddress, chainId: 1 });
+
+  const vault = data.vaultV2ByAddress;
+  const decimals = vault.asset.decimals;
+  const priceUsd = vault.asset.priceUsd;
+
+  return vault.caps.items
+    .filter((cap) => cap.allocation > 0)
+    .map((cap) => {
+      const allocationUsd = (cap.allocation / 10 ** decimals) * priceUsd;
+
+      // Build a human-readable label from the cap's union type
+      let label: string;
+      if (cap.data.market) {
+        const lltv = Number(cap.data.market.lltv) / 1e18;
+        label = `${cap.data.market.collateralAsset.symbol} / ${cap.data.market.loanAsset.symbol} (${(lltv * 100).toFixed(0)}% LLTV)`;
+      } else if (cap.data.adapter) {
+        const adapterType = cap.data.adapter.type;
+        label = adapterType === "MetaMorpho" ? "MetaMorpho Sub-Vault" : `${adapterType} Adapter`;
+      } else {
+        label = cap.type;
+      }
+
+      return {
+        type: cap.type,
+        allocation: cap.allocation,
+        allocationUsd,
+        label,
+      };
+    })
+    .sort((a, b) => b.allocation - a.allocation);
 }
