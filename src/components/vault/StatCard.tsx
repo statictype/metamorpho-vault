@@ -1,4 +1,5 @@
 import { Skeleton } from "@/components/ui/Skeleton";
+import { AnimatedValue } from "@/components/ui/AnimatedValue";
 
 interface StatCardProps {
   label: string;
@@ -18,8 +19,14 @@ export function StatCard({ label, value, subValue, isLoading, isError }: StatCar
         <p className="text-lg font-semibold text-gray-500">---</p>
       ) : (
         <>
-          <p className="text-lg font-semibold text-white">{value}</p>
-          {subValue && <p className="text-xs text-gray-500 mt-0.5">{subValue}</p>}
+          <p className="text-lg font-semibold text-white">
+            <AnimatedValue value={value} />
+          </p>
+          {subValue && (
+            <p className="text-xs text-gray-500 mt-0.5">
+              <AnimatedValue value={subValue} />
+            </p>
+          )}
         </>
       )}
     </div>
