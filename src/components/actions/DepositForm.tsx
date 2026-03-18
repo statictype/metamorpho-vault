@@ -28,9 +28,10 @@ export function DepositForm() {
 
   const pendingLabel = isConfirming ? "Confirming..." : "Depositing...";
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!parsedAmount || validationError) return;
-    deposit(parsedAmount);
+    const submitted = await deposit(parsedAmount);
+    if (submitted) setAmount("");
   };
 
   return (

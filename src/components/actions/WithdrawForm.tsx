@@ -24,7 +24,7 @@ export function WithdrawForm() {
     return undefined;
   }, [amount, parsedAmount, maxAssets]);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!parsedAmount || validationError || maxAssets === BigInt(0)) return;
 
     // Convert assets amount to shares proportionally
@@ -34,7 +34,8 @@ export function WithdrawForm() {
         ? maxShares
         : (parsedAmount * maxShares) / maxAssets;
 
-    withdraw(sharesToRedeem);
+    const submitted = await withdraw(sharesToRedeem);
+    if (submitted) setAmount("");
   };
 
   return (
