@@ -1,36 +1,103 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# MetaMorpho Vault — 3F x Steakhouse USDC
 
-## Getting Started
+A single-page deposit & withdrawal interface for the [3F x Steakhouse USDC MetaMorpho vault](https://etherscan.io/address/0xBEEf3f3A04e28895f3D5163d910474901981183D) on Ethereum mainnet.
 
-First, run the development server:
+## Stack
+
+- **Next.js 16** (App Router, TypeScript strict)
+- **Wagmi v2 + Viem** — on-chain reads & write transactions
+- **RainbowKit** — wallet connection
+- **TanStack Query** — data fetching & caching
+- **Recharts** — share price chart
+- **Tailwind CSS v4** — styling
+
+## Quick Start (Local Development with Anvil)
+
+### Prerequisites
+
+1. **Node.js 20+** and **pnpm**
+2. **Foundry** (for Anvil local fork):
+   ```bash
+   curl -L https://foundry.paradigm.xyz | bash && foundryup
+   ```
+3. **Alchemy API key** (free tier): sign up at [alchemy.com](https://www.alchemy.com/), create an Ethereum mainnet app
+4. **WalletConnect Project ID** (optional): get one at [cloud.walletconnect.com](https://cloud.walletconnect.com/)
+
+### Setup
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+# 1. Install dependencies
+pnpm install
+
+# 2. Configure environment
+cp .env.local.example .env.local
+# Edit .env.local with your Alchemy API key
+
+# 3. Start Anvil fork (in a separate terminal)
+ALCHEMY_API_KEY=<your-key> ./scripts/start-anvil.sh
+
+# 4. Fund dev wallet with USDC
+./scripts/fund-dev-wallet.sh
+
+# 5. Start the app
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Wallet Setup
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. Import Anvil's default account #0 into MetaMask:
+   - Private key: `0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80`
+2. Add a custom network in MetaMask:
+   - RPC URL: `http://127.0.0.1:8545`
+   - Chain ID: `1`
+   - Currency: `ETH`
+3. Connect via RainbowKit in the app
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Production Mode
 
-## Learn More
+Set `NEXT_PUBLIC_RPC_URL` to your Alchemy mainnet URL:
 
-To learn more about Next.js, take a look at the following resources:
+```
+NEXT_PUBLIC_RPC_URL=https://eth-mainnet.g.alchemy.com/v2/<your-key>
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Architecture
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Data Sources
 
-## Deploy on Vercel
+| Data | Source | Refresh |
+|------|--------|---------|
+| TVL (raw) | On-chain `totalAssets()` | 15s |
+| TVL (USD) | Morpho API `totalAssetsUsd` | 60s |
+| APY | Morpho API `netApy` | 60s |
+| Liquidity | Morpho API `liquidityUsd` | 60s |
+| Share Price History | Morpho API `historicalState` | 5min |
+| User Position | On-chain `balanceOf` + `convertToAssets` | 15s |
+| Allowance | On-chain ERC-20 `allowance` | 10s |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Transaction Flow
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Deposit**: Checks USDC allowance → if insufficient, sends `approve()` then `deposit()` as two sequential transactions → toasts for each step
+- **Withdraw**: Converts input USDC amount to shares proportionally → sends `redeem()` → toast lifecycle
+
+### Error Handling
+
+- **RPC failure**: Stat cards show "---", wagmi auto-retries
+- **API down**: Chart shows "Data unavailable" placeholder
+- **User rejects tx**: Detects rejection, shows "Transaction rejected" toast
+- **Insufficient balance**: Button disabled with validation message
+- **Wrong network**: RainbowKit shows "Wrong Network" button
+
+## Vault Details
+
+- **Vault**: 3F x Steakhouse USDC MetaMorpho
+- **Address**: `0xBEEf3f3A04e28895f3D5163d910474901981183D`
+- **Asset**: USDC (`0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48`, 6 decimals)
+- **Standard**: ERC-4626 (tokenized vault)
+
+## Trade-offs & Decisions
+
+- **Wagmi v2 `writeContractAsync`** over `useSendCalls` batch: More reliable across wallet types. `sendCalls` (EIP-5792) isn't universally supported yet, so approve + deposit are sent as sequential transactions for maximum compatibility.
+- **Morpho Blue API** for off-chain data (APY, liquidity, historical prices) vs computing everything on-chain: Better UX with less RPC load.
+- **Dark theme only**: Matches the Morpho/DeFi aesthetic and simplifies the design.
+- **No server components for data**: All vault data is client-side fetched since it depends on wallet state and needs frequent refreshes.
