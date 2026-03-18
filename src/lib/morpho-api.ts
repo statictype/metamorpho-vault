@@ -24,26 +24,25 @@ async function gqlFetch<T>(query: string, variables?: Record<string, unknown>): 
 export async function fetchVaultData(vaultAddress: string): Promise<VaultApiData> {
   const query = `
     query VaultData($address: String!, $chainId: Int!) {
-      vaultByAddress(address: $address, chainId: $chainId) {
+      vaultV2ByAddress(address: $address, chainId: $chainId) {
         address
         name
         symbol
-        state {
-          totalAssetsUsd
-          totalAssets
-          liquidity
-          liquidityUsd
-          netApy
-          apy
-        }
+        totalAssetsUsd
+        totalAssets
+        liquidityUsd
+        liquidity
+        avgNetApy
+        netApy
+        apy
         asset {
           address
           symbol
           decimals
           priceUsd
         }
-        metadata {
-          curators {
+        curators {
+          items {
             name
           }
         }
@@ -52,41 +51,40 @@ export async function fetchVaultData(vaultAddress: string): Promise<VaultApiData
   `;
 
   const data = await gqlFetch<{
-    vaultByAddress: {
+    vaultV2ByAddress: {
       address: string;
       name: string;
       symbol: string;
-      state: {
-        totalAssetsUsd: number;
-        totalAssets: string;
-        liquidity: string;
-        liquidityUsd: number;
-        netApy: number;
-        apy: number;
-      };
+      totalAssetsUsd: number;
+      totalAssets: string;
+      liquidityUsd: number;
+      liquidity: string;
+      avgNetApy: number;
+      netApy: number;
+      apy: number;
       asset: {
         address: string;
         symbol: string;
         decimals: number;
         priceUsd: number;
       };
-      metadata: {
-        curators: Array<{ name: string }>;
+      curators: {
+        items: Array<{ name: string }>;
       };
     };
   }>(query, { address: vaultAddress, chainId: 1 });
 
-  const vault = data.vaultByAddress;
+  const vault = data.vaultV2ByAddress;
   return {
     address: vault.address,
     name: vault.name,
     symbol: vault.symbol,
-    totalAssetsUsd: vault.state.totalAssetsUsd,
-    totalAssets: vault.state.totalAssets,
-    liquidity: vault.state.liquidity,
-    liquidityUsd: vault.state.liquidityUsd,
-    avgNetApy: vault.state.netApy ?? vault.state.apy ?? 0,
-    curator: vault.metadata?.curators?.[0] ?? null,
+    totalAssetsUsd: vault.totalAssetsUsd,
+    totalAssets: vault.totalAssets,
+    liquidity: vault.liquidity,
+    liquidityUsd: vault.liquidityUsd,
+    avgNetApy: vault.avgNetApy ?? vault.netApy ?? vault.apy ?? 0,
+    curator: vault.curators?.items?.[0] ?? null,
     asset: vault.asset,
   };
 }
@@ -94,48 +92,47 @@ export async function fetchVaultData(vaultAddress: string): Promise<VaultApiData
 export async function fetchVaultHistory(vaultAddress: string): Promise<HistoricalDataPoint[]> {
   const query = `
     query VaultHistory($address: String!, $chainId: Int!) {
-      vaultByAddress(address: $address, chainId: $chainId) {
+      vaultV2ByAddress(address: $address, chainId: $chainId) {
         historicalState {
-          totalAssets
-          totalSupply
-          apy
-          timestamp
+          sharePrice(options: { interval: DAY }) {
+            x
+            y
+          }
+          avgNetApy(options: { interval: DAY }) {
+            x
+            y
+          }
         }
       }
     }
   `;
 
   const data = await gqlFetch<{
-    vaultByAddress: {
+    vaultV2ByAddress: {
       historicalState: {
-        all: Array<{
-          totalAssets: string;
-          totalSupply: string;
-          apy: number;
-          timestamp: number;
-        }>;
+        sharePrice: Array<{ x: number; y: number }>;
+        avgNetApy: Array<{ x: number; y: number }>;
       };
     };
   }>(query, { address: vaultAddress, chainId: 1 });
 
-  const history = data.vaultByAddress?.historicalState?.all ?? data.vaultByAddress?.historicalState ?? [];
-  const items = Array.isArray(history) ? history : [];
+  const sharePrices = data.vaultV2ByAddress?.historicalState?.sharePrice ?? [];
+  const apys = data.vaultV2ByAddress?.historicalState?.avgNetApy ?? [];
 
-  return items.map((point) => {
-    const totalAssets = Number(point.totalAssets) / 1e6; // USDC 6 decimals
-    const totalSupply = Number(point.totalSupply) / 1e18; // Vault shares 18 decimals
-    const sharePrice = totalSupply > 0 ? totalAssets / totalSupply : 1;
+  // Build a map of timestamp -> apy for joining
+  const apyMap = new Map(apys.map((p) => [p.x, p.y]));
 
-    return {
-      timestamp: point.timestamp,
-      date: new Date(point.timestamp * 1000).toLocaleDateString("en-US", {
+  return sharePrices
+    .map((point) => ({
+      timestamp: point.x,
+      date: new Date(point.x * 1000).toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
       }),
-      totalAssets,
-      totalSupply,
-      sharePrice,
-      apy: point.apy ?? 0,
-    };
-  });
+      totalAssets: 0,
+      totalSupply: 0,
+      sharePrice: point.y,
+      apy: apyMap.get(point.x) ?? 0,
+    }))
+    .sort((a, b) => a.timestamp - b.timestamp);
 }
