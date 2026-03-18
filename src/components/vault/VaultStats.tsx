@@ -24,18 +24,21 @@ export function VaultStats() {
         subValue={tvlUsd && tvlDisplay ? tvlDisplay : undefined}
         isLoading={onChain.isLoading && api.isLoading}
         isError={onChain.isError && api.isError}
+        onRetry={() => { onChain.refetch(); api.refetch(); }}
       />
       <StatCard
         label="Net APY"
         value={api.data ? formatPercent(api.data.avgNetApy) : ""}
         isLoading={api.isLoading}
         isError={api.isError}
+        onRetry={api.refetch}
       />
       <StatCard
         label="Available Liquidity"
         value={api.data ? formatUsd(api.data.liquidityUsd) : ""}
         isLoading={api.isLoading}
         isError={api.isError}
+        onRetry={api.refetch}
       />
       <StatCard
         label="Total Supply"
@@ -48,6 +51,7 @@ export function VaultStats() {
         }
         isLoading={onChain.isLoading}
         isError={onChain.isError}
+        onRetry={onChain.refetch}
       />
     </div>
   );

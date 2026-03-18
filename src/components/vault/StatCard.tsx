@@ -7,16 +7,27 @@ interface StatCardProps {
   subValue?: string;
   isLoading?: boolean;
   isError?: boolean;
+  onRetry?: () => void;
 }
 
-export function StatCard({ label, value, subValue, isLoading, isError }: StatCardProps) {
+export function StatCard({ label, value, subValue, isLoading, isError, onRetry }: StatCardProps) {
   return (
     <div className="rounded-xl border border-white/10 bg-white/5 p-4">
       <p className="text-sm text-gray-400 mb-1">{label}</p>
       {isLoading ? (
         <Skeleton className="h-7 w-24" />
       ) : isError ? (
-        <p className="text-lg font-semibold text-gray-500">---</p>
+        <div className="flex items-center gap-2">
+          <p className="text-lg font-semibold text-gray-500">---</p>
+          {onRetry && (
+            <button
+              onClick={onRetry}
+              className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+            >
+              Retry
+            </button>
+          )}
+        </div>
       ) : (
         <>
           <p className="text-lg font-semibold text-white">
