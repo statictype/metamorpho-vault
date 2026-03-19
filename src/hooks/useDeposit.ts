@@ -4,20 +4,17 @@ import { useState, useEffect, useRef } from "react";
 import { useAccount, useSendCalls, useCallsStatus } from "wagmi";
 import { useQueryClient } from "@tanstack/react-query";
 import { encodeFunctionData } from "viem";
-import { readContractQueryKey, readContractsQueryKey } from "wagmi/query";
+import { readContractsQueryKey } from "wagmi/query";
 import { VAULT_ADDRESS, USDC_ADDRESS, erc20Abi, metaMorphoAbi } from "@/config/contracts";
 import { useUserData } from "./useUserData";
 import { useToast } from "@/components/ui/ToastProvider";
 import { QUERY_KEYS } from "@/lib/constants";
 
 // On-chain queries affected by a deposit:
-// - USDC balanceOf: decreases by deposit amount
-// - USDC allowance: consumed by approve
-// - Vault balanceOf + convertToAssets (useUserPosition): user gains shares
-// - Vault totalAssets + totalSupply (useVaultOnChain): vault totals increase
+// - useUserData (USDC balance, allowance, vault shares): balance decreases, allowance consumed, shares increase
+// - useVaultOnChain (totalAssets, totalSupply): vault totals increase
 const DEPOSIT_AFFECTED_KEYS = [
-  readContractQueryKey({ address: USDC_ADDRESS, functionName: "balanceOf" }),
-  readContractQueryKey({ address: USDC_ADDRESS, functionName: "allowance" }),
+  readContractsQueryKey({ contracts: [{ address: USDC_ADDRESS }] }),
   readContractsQueryKey({ contracts: [{ address: VAULT_ADDRESS }] }),
 ];
 

@@ -4,17 +4,16 @@ import { useState, useEffect, useRef } from "react";
 import { useAccount, useSendCalls, useCallsStatus } from "wagmi";
 import { useQueryClient } from "@tanstack/react-query";
 import { encodeFunctionData } from "viem";
-import { readContractQueryKey, readContractsQueryKey } from "wagmi/query";
+import { readContractsQueryKey } from "wagmi/query";
 import { VAULT_ADDRESS, USDC_ADDRESS, metaMorphoAbi } from "@/config/contracts";
 import { useToast } from "@/components/ui/ToastProvider";
 import { QUERY_KEYS } from "@/lib/constants";
 
 // On-chain queries affected by a withdrawal:
-// - USDC balanceOf: increases by redeemed amount
-// - Vault balanceOf + convertToAssets (useUserPosition): user loses shares
-// - Vault totalAssets + totalSupply (useVaultOnChain): vault totals decrease
+// - useUserData (USDC balance, vault shares): balance increases, shares decrease
+// - useVaultOnChain (totalAssets, totalSupply): vault totals decrease
 const WITHDRAW_AFFECTED_KEYS = [
-  readContractQueryKey({ address: USDC_ADDRESS, functionName: "balanceOf" }),
+  readContractsQueryKey({ contracts: [{ address: USDC_ADDRESS }] }),
   readContractsQueryKey({ contracts: [{ address: VAULT_ADDRESS }] }),
 ];
 
