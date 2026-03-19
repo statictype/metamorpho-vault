@@ -35,9 +35,9 @@ function RollingDigit({ char }: { char: string }) {
 
 export function AnimatedValue({ value, className }: AnimatedValueProps) {
   return (
-    <span className={className} aria-label={value}>
-      {value.split("").map((char, i) => (
-        <RollingDigit key={i} char={char} />
+    <span className={className} style={{ fontVariantNumeric: "tabular-nums" }} aria-label={value}>
+      {value.split("").map((char, i, arr) => (
+        <RollingDigit key={arr.length - i} char={char} />
       ))}
     </span>
   );

@@ -129,8 +129,6 @@ export async function fetchVaultHistory(vaultAddress: string): Promise<Historica
         month: "short",
         day: "numeric",
       }),
-      totalAssets: 0,
-      totalSupply: 0,
       sharePrice: point.y,
       apy: apyMap.get(point.x) ?? 0,
     }))

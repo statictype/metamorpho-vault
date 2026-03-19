@@ -19,8 +19,6 @@ export interface VaultApiData {
 export interface HistoricalDataPoint {
   timestamp: number;
   date: string;
-  totalAssets: number;
-  totalSupply: number;
   sharePrice: number;
   apy: number;
 }
