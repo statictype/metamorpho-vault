@@ -4,10 +4,28 @@ import { useState, useEffect, useRef } from "react";
 import { useAccount, useSendCalls, useCallsStatus } from "wagmi";
 import { useQueryClient } from "@tanstack/react-query";
 import { encodeFunctionData } from "viem";
+import { readContractQueryKey, readContractsQueryKey } from "wagmi/query";
 import { VAULT_ADDRESS, USDC_ADDRESS, erc20Abi, metaMorphoAbi } from "@/config/contracts";
 import { useAllowance } from "./useAllowance";
 import { useToast } from "@/components/ui/ToastProvider";
 import { QUERY_KEYS } from "@/lib/constants";
+
+// On-chain queries affected by a deposit:
+// - USDC balanceOf: decreases by deposit amount
+// - USDC allowance: consumed by approve
+// - Vault balanceOf + convertToAssets (useUserPosition): user gains shares
+// - Vault totalAssets + totalSupply (useVaultOnChain): vault totals increase
+const DEPOSIT_AFFECTED_KEYS = [
+  readContractQueryKey({ address: USDC_ADDRESS, functionName: "balanceOf" }),
+  readContractQueryKey({ address: USDC_ADDRESS, functionName: "allowance" }),
+  readContractsQueryKey({ contracts: [{ address: VAULT_ADDRESS }] }),
+];
+
+// API queries to refetch after deposit (TVL USD, liquidity, allocations shift)
+const DEPOSIT_API_KEYS = [
+  QUERY_KEYS.vaultApi,
+  QUERY_KEYS.vaultAllocations,
+];
 
 export function useDeposit() {
   const { address } = useAccount();
@@ -20,7 +38,16 @@ export function useDeposit() {
   const confirmToastId = useRef<string | undefined>(undefined);
   const handledId = useRef<string | undefined>(undefined);
 
-  const { sendCallsAsync } = useSendCalls();
+  const { sendCallsAsync } = useSendCalls({
+    mutation: {
+      onSuccess: () => {
+        // Eagerly refetch on-chain data when wallet accepts
+        for (const queryKey of DEPOSIT_AFFECTED_KEYS) {
+          queryClient.invalidateQueries({ queryKey });
+        }
+      },
+    },
+  });
 
   const { data: callsStatus } = useCallsStatus({
     id: callsId as string,
@@ -33,11 +60,9 @@ export function useDeposit() {
     },
   });
 
-  // Derive pending/confirming from query data
   const isConfirming = !!callsId && callsStatus?.status === "pending";
   const isPending = isSubmitting || isConfirming;
 
-  // Handle confirmation side effects (toasts, cache invalidation)
   useEffect(() => {
     if (!callsId || !callsStatus) return;
     if (handledId.current === callsId) return;
@@ -51,10 +76,10 @@ export function useDeposit() {
         title: "Deposit Successful!",
         description: "Your USDC has been deposited into the vault",
       });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.userPosition });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.allowance });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.vaultOnChain });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.usdcBalance });
+      // Refetch on-chain + API data after confirmation
+      for (const queryKey of [...DEPOSIT_AFFECTED_KEYS, ...DEPOSIT_API_KEYS]) {
+        queryClient.invalidateQueries({ queryKey });
+      }
     }
 
     if (callsStatus.status === "failure") {
@@ -77,7 +102,6 @@ export function useDeposit() {
   const deposit = async (amount: bigint): Promise<boolean> => {
     if (!address) return false;
 
-    // Reset from any previous deposit
     setCallsId(undefined);
     handledId.current = undefined;
     confirmToastId.current = undefined;
@@ -86,7 +110,6 @@ export function useDeposit() {
     const toastId = `deposit-${Date.now()}`;
 
     try {
-      // Build calls array — batch approve + deposit when needed
       const calls: { to: `0x${string}`; data: `0x${string}` }[] = [];
 
       if (needsApproval(amount)) {
@@ -121,7 +144,6 @@ export function useDeposit() {
         experimental_fallback: true,
       });
 
-      // Wallet accepted — now track on-chain confirmation
       removeToast(toastId);
       const cToastId = `${result.id}-confirming`;
       confirmToastId.current = cToastId;

@@ -4,9 +4,25 @@ import { useState, useEffect, useRef } from "react";
 import { useAccount, useSendCalls, useCallsStatus } from "wagmi";
 import { useQueryClient } from "@tanstack/react-query";
 import { encodeFunctionData } from "viem";
-import { VAULT_ADDRESS, metaMorphoAbi } from "@/config/contracts";
+import { readContractQueryKey, readContractsQueryKey } from "wagmi/query";
+import { VAULT_ADDRESS, USDC_ADDRESS, metaMorphoAbi } from "@/config/contracts";
 import { useToast } from "@/components/ui/ToastProvider";
 import { QUERY_KEYS } from "@/lib/constants";
+
+// On-chain queries affected by a withdrawal:
+// - USDC balanceOf: increases by redeemed amount
+// - Vault balanceOf + convertToAssets (useUserPosition): user loses shares
+// - Vault totalAssets + totalSupply (useVaultOnChain): vault totals decrease
+const WITHDRAW_AFFECTED_KEYS = [
+  readContractQueryKey({ address: USDC_ADDRESS, functionName: "balanceOf" }),
+  readContractsQueryKey({ contracts: [{ address: VAULT_ADDRESS }] }),
+];
+
+// API queries to refetch after withdrawal (TVL USD, liquidity, allocations shift)
+const WITHDRAW_API_KEYS = [
+  QUERY_KEYS.vaultApi,
+  QUERY_KEYS.vaultAllocations,
+];
 
 export function useWithdraw() {
   const { address } = useAccount();
@@ -18,7 +34,15 @@ export function useWithdraw() {
   const confirmToastId = useRef<string | undefined>(undefined);
   const handledId = useRef<string | undefined>(undefined);
 
-  const { sendCallsAsync } = useSendCalls();
+  const { sendCallsAsync } = useSendCalls({
+    mutation: {
+      onSuccess: () => {
+        for (const queryKey of WITHDRAW_AFFECTED_KEYS) {
+          queryClient.invalidateQueries({ queryKey });
+        }
+      },
+    },
+  });
 
   const { data: callsStatus } = useCallsStatus({
     id: callsId as string,
@@ -31,11 +55,9 @@ export function useWithdraw() {
     },
   });
 
-  // Derive pending/confirming from query data
   const isConfirming = !!callsId && callsStatus?.status === "pending";
   const isPending = isSubmitting || isConfirming;
 
-  // Handle confirmation side effects (toasts, cache invalidation)
   useEffect(() => {
     if (!callsId || !callsStatus) return;
     if (handledId.current === callsId) return;
@@ -49,9 +71,9 @@ export function useWithdraw() {
         title: "Withdrawal Successful!",
         description: "Your USDC has been withdrawn from the vault",
       });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.userPosition });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.vaultOnChain });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.usdcBalance });
+      for (const queryKey of [...WITHDRAW_AFFECTED_KEYS, ...WITHDRAW_API_KEYS]) {
+        queryClient.invalidateQueries({ queryKey });
+      }
     }
 
     if (callsStatus.status === "failure") {
@@ -69,7 +91,6 @@ export function useWithdraw() {
   const withdraw = async (shares: bigint): Promise<boolean> => {
     if (!address) return false;
 
-    // Reset from any previous withdrawal
     setCallsId(undefined);
     handledId.current = undefined;
     confirmToastId.current = undefined;
@@ -99,7 +120,6 @@ export function useWithdraw() {
         ],
       });
 
-      // Wallet accepted — now track on-chain confirmation
       removeToast(toastId);
       const cToastId = `${result.id}-confirming`;
       confirmToastId.current = cToastId;

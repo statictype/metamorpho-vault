@@ -45,6 +45,7 @@ export function DepositForm() {
         tokenSymbol="USDC"
         label="Deposit amount"
         disabled={isPending}
+
       />
       <ActionButton
         onClick={handleSubmit}

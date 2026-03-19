@@ -1,6 +1,7 @@
 "use client";
 
 import { formatUsdc } from "@/lib/format";
+import { AnimatedValue } from "@/components/ui/AnimatedValue";
 
 interface AmountInputProps {
   value: string;
@@ -43,7 +44,7 @@ export function AmountInput({
         <label className="text-sm text-gray-400">{label}</label>
         {maxAmount !== undefined && (
           <span className="text-xs text-gray-500">
-            Balance: {formatUsdc(maxAmount)} {tokenSymbol}
+            Balance: <AnimatedValue value={`${formatUsdc(maxAmount)} ${tokenSymbol}`} />
           </span>
         )}
       </div>

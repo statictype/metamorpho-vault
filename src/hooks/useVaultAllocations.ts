@@ -9,7 +9,7 @@ export function useVaultAllocations() {
   return useQuery({
     queryKey: QUERY_KEYS.vaultAllocations,
     queryFn: () => fetchVaultAllocations(VAULT_ADDRESS),
-    staleTime: 5 * 60_000,
-    refetchInterval: 5 * 60_000,
+    staleTime: 60_000,
+    refetchInterval: 60_000,
   });
 }
