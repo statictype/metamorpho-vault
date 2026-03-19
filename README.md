@@ -68,14 +68,16 @@ NEXT_PUBLIC_RPC_URL=https://eth-mainnet.g.alchemy.com/v2/<your-key>
 
 | Data | Source | Refresh |
 |------|--------|---------|
-| TVL (raw) | On-chain `totalAssets()` | 3s |
-| TVL (USD) | Morpho API `totalAssetsUsd` | 60s |
-| APY | Morpho API `avgNetApy` | 60s |
-| Liquidity | Morpho API `liquidityUsd` | 60s |
+| TVL (raw) | On-chain `totalAssets()` | 15s |
+| TVL (USD) | Morpho API `totalAssetsUsd` | 30s |
+| APY | Morpho API `avgNetApy` | 30s |
+| Liquidity | Morpho API `liquidityUsd` | 30s |
 | Share Price History | Morpho API `historicalState` | 5min |
-| Market Allocations | Morpho API `caps` | 5min |
+| Market Allocations | Morpho API `caps` | 60s |
 | User Position | On-chain `balanceOf` + `convertToAssets` | 15s |
 | Allowance | On-chain ERC-20 `allowance` | 10s |
+
+All on-chain and API queries affected by a transaction are immediately invalidated using wagmi's query key factories (`readContractQueryKey`, `readContractsQueryKey`) and TanStack Query keys. Queries also refetch on window focus.
 
 ### Transaction Flow
 
