@@ -1,7 +1,8 @@
 "use client";
 
-import { useReadContracts, useAccount } from "wagmi";
+import { useReadContract, useAccount } from "wagmi";
 import { VAULT_ADDRESS, metaMorphoAbi } from "@/config/contracts";
+import { useVaultOnChain } from "./useVaultOnChain";
 import type { UserPosition } from "@/types";
 
 export function useUserPosition(): {
@@ -11,24 +12,13 @@ export function useUserPosition(): {
   refetch: () => void;
 } {
   const { address, isConnected } = useAccount();
+  const { totalAssets, totalSupply } = useVaultOnChain();
 
-  const result = useReadContracts({
-    contracts: [
-      {
-        address: VAULT_ADDRESS,
-        abi: metaMorphoAbi,
-        functionName: "balanceOf",
-        args: address ? [address] : undefined,
-      },
-      {
-        address: VAULT_ADDRESS,
-        abi: metaMorphoAbi,
-        functionName: "convertToAssets",
-        // We'll use balanceOf result in a separate call, but for now read with a placeholder
-        // Actually we need a two-step approach or read both and compute
-        args: [BigInt(0)],
-      },
-    ],
+  const sharesResult = useReadContract({
+    address: VAULT_ADDRESS,
+    abi: metaMorphoAbi,
+    functionName: "balanceOf",
+    args: address ? [address] : undefined,
     query: {
       enabled: isConnected && !!address,
       refetchInterval: 15_000,
@@ -36,26 +26,15 @@ export function useUserPosition(): {
     },
   });
 
-  const shares = result.data?.[0]?.result as bigint | undefined;
+  const shares = sharesResult.data as bigint | undefined;
 
-  // Second call to get actual assets from shares
-  const assetsResult = useReadContracts({
-    contracts: [
-      {
-        address: VAULT_ADDRESS,
-        abi: metaMorphoAbi,
-        functionName: "convertToAssets",
-        args: shares ? [shares] : [BigInt(0)],
-      },
-    ],
-    query: {
-      enabled: isConnected && !!address && shares !== undefined && shares > BigInt(0),
-      refetchInterval: 15_000,
-      staleTime: 12_000,
-    },
-  });
-
-  const assets = assetsResult.data?.[0]?.result as bigint | undefined;
+  // Compute assets client-side using the ERC-4626 formula rather than a
+  // separate convertToAssets() RPC call, since totalAssets and totalSupply
+  // are already cached by useVaultOnChain. Avoids a request waterfall.
+  const assets =
+    shares && totalAssets && totalSupply && totalSupply > BigInt(0)
+      ? (shares * totalAssets) / totalSupply
+      : undefined;
 
   const position: UserPosition | null =
     shares !== undefined
@@ -67,11 +46,8 @@ export function useUserPosition(): {
 
   return {
     position,
-    isLoading: result.isLoading || assetsResult.isLoading,
-    isError: result.isError,
-    refetch: () => {
-      result.refetch();
-      assetsResult.refetch();
-    },
+    isLoading: sharesResult.isLoading,
+    isError: sharesResult.isError,
+    refetch: sharesResult.refetch,
   };
 }
