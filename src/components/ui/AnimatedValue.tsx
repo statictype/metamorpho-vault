@@ -9,7 +9,11 @@ const DIGITS = "0123456789";
 
 function RollingDigit({ char }: { char: string }) {
   if (!DIGITS.includes(char)) {
-    return <>{char}</>;
+    return (
+      <span className="inline-block" style={{ height: "1lh" }}>
+        {char}
+      </span>
+    );
   }
 
   const digit = Number(char);
