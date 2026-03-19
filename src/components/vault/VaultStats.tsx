@@ -46,9 +46,10 @@ export function VaultStats() {
           onChain.totalSupply
             ? Number(formatUnits(onChain.totalSupply, 18)).toLocaleString("en-US", {
                 maximumFractionDigits: 2,
-              }) + " shares"
+              })
             : ""
         }
+        suffix="shares"
         isLoading={onChain.isLoading}
         isError={onChain.isError}
         onRetry={onChain.refetch}
