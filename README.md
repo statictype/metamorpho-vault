@@ -4,12 +4,13 @@ A single-page deposit & withdrawal interface for the [3F x Steakhouse USDC MetaM
 
 ## Stack
 
-- **Next.js 16** (App Router, TypeScript strict)
-- **Wagmi v2 + Viem** — on-chain reads & write transactions
+- **Next.js 16** (App Router, TypeScript strict, React Compiler)
+- **Wagmi v3 + Viem** — on-chain reads & EIP-5792 batched writes via `useSendCalls`
 - **RainbowKit** — wallet connection
 - **TanStack Query** — data fetching & caching
 - **Recharts** — share price chart
 - **Tailwind CSS v4** — styling
+- **Vitest** — unit tests
 
 ## Quick Start (Local Development with Anvil)
 
@@ -34,8 +35,6 @@ cp .env.local.example .env.local
 
 # 3. Start Anvil fork (in a separate terminal — reads key from .env.local)
 ./scripts/start-anvil.sh
-# If that fails, pass the key directly:
-# ALCHEMY_API_KEY=<your-key> ./scripts/start-anvil.sh
 
 # 4. Fund dev wallet with USDC
 ./scripts/fund-dev-wallet.sh
@@ -69,23 +68,27 @@ NEXT_PUBLIC_RPC_URL=https://eth-mainnet.g.alchemy.com/v2/<your-key>
 
 | Data | Source | Refresh |
 |------|--------|---------|
-| TVL (raw) | On-chain `totalAssets()` | 15s |
+| TVL (raw) | On-chain `totalAssets()` | 3s |
 | TVL (USD) | Morpho API `totalAssetsUsd` | 60s |
 | APY | Morpho API `avgNetApy` | 60s |
 | Liquidity | Morpho API `liquidityUsd` | 60s |
 | Share Price History | Morpho API `historicalState` | 5min |
+| Market Allocations | Morpho API `caps` | 5min |
 | User Position | On-chain `balanceOf` + `convertToAssets` | 15s |
 | Allowance | On-chain ERC-20 `allowance` | 10s |
 
 ### Transaction Flow
 
-- **Deposit**: Checks USDC allowance → if insufficient, sends `approve()` then `deposit()` as two sequential transactions → toasts for each step
-- **Withdraw**: Converts input USDC amount to shares proportionally → sends `redeem()` → toast lifecycle
+All write transactions use `useSendCalls` (EIP-5792) with `experimental_fallback: true` for EOA compatibility.
+
+- **Deposit**: Checks USDC allowance → if insufficient, batches `approve` + `deposit` into a single `sendCalls` invocation. If sufficient, sends only `deposit`. Confirmation tracked via `useCallsStatus` polling.
+- **Withdraw**: Converts input USDC amount to shares proportionally → sends `redeem` via `sendCalls`.
+- **Toast lifecycle**: pending (wallet signing) → confirming (on-chain) → confirmed or failed.
 
 ### Error Handling
 
-- **RPC failure**: Stat cards show "---", wagmi auto-retries
-- **API down**: Chart shows "Data unavailable" placeholder
+- **RPC failure**: Stat cards show "---" with a Retry button
+- **API down**: Chart and allocations show "Data unavailable" placeholder
 - **User rejects tx**: Detects rejection, shows "Transaction rejected" toast
 - **Insufficient balance**: Button disabled with validation message
 - **Wrong network**: RainbowKit shows "Wrong Network" button
@@ -96,10 +99,12 @@ NEXT_PUBLIC_RPC_URL=https://eth-mainnet.g.alchemy.com/v2/<your-key>
 - **Address**: `0xBEEf3f3A04e28895f3D5163d910474901981183D`
 - **Asset**: USDC (`0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48`, 6 decimals)
 - **Standard**: ERC-4626 (tokenized vault)
+- **Why this vault**: It's the 3F Labs flagship vault, making it the natural choice for this assessment.
 
 ## Trade-offs & Decisions
 
-- **Wagmi v2 `writeContractAsync`** over `useSendCalls` batch: More reliable across wallet types. `sendCalls` (EIP-5792) isn't universally supported yet, so approve + deposit are sent as sequential transactions for maximum compatibility.
+- **`useSendCalls` with `experimental_fallback`**: EIP-5792 batching for smart wallet compatibility (EIP-7702). The fallback ensures EOA wallets gracefully degrade to sequential transactions.
 - **Morpho V2 API** for off-chain data (APY, liquidity, historical share prices) vs computing everything on-chain: Better UX with less RPC load.
+- **React Compiler** enabled — no manual memoization (`useMemo`/`useCallback`), the compiler handles it automatically.
 - **Dark theme only**: Matches the Morpho/DeFi aesthetic and simplifies the design.
 - **No server components for data**: All vault data is client-side fetched since it depends on wallet state and needs frequent refreshes.
