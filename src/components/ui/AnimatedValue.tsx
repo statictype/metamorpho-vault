@@ -6,11 +6,12 @@ interface AnimatedValueProps {
 }
 
 const DIGITS = "0123456789";
+const ROW_HEIGHT = "1.5em";
 
 function RollingDigit({ char }: { char: string }) {
   if (!DIGITS.includes(char)) {
     return (
-      <span className="inline-block" style={{ height: "1lh" }}>
+      <span className="inline-block align-top" style={{ height: ROW_HEIGHT, lineHeight: ROW_HEIGHT }}>
         {char}
       </span>
     );
@@ -20,15 +21,15 @@ function RollingDigit({ char }: { char: string }) {
 
   return (
     <span
-      className="inline-block"
-      style={{ height: "1lh", overflow: "clip" }}
+      className="inline-block align-top"
+      style={{ height: ROW_HEIGHT, lineHeight: ROW_HEIGHT, overflow: "hidden" }}
     >
       <span
         className="flex flex-col transition-transform duration-500 ease-out"
-        style={{ transform: `translateY(calc(${digit} * -1lh))` }}
+        style={{ transform: `translateY(calc(${digit} * -${ROW_HEIGHT}))` }}
       >
         {DIGITS.split("").map((d) => (
-          <span key={d} className="block" style={{ height: "1lh" }}>
+          <span key={d} className="block" style={{ height: ROW_HEIGHT, lineHeight: ROW_HEIGHT }}>
             {d}
           </span>
         ))}
