@@ -1,5 +1,3 @@
-"use client";
-
 import { VaultHeader } from "@/components/vault/VaultHeader";
 import { VaultStats } from "@/components/vault/VaultStats";
 import { SharePriceChart } from "@/components/vault/SharePriceChart";
