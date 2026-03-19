@@ -4,12 +4,12 @@ import { useState } from "react";
 import { AmountInput } from "./AmountInput";
 import { ActionButton } from "./ActionButton";
 import { useDeposit } from "@/hooks/useDeposit";
-import { useUsdcBalance } from "@/hooks/useUsdcBalance";
+import { useUserData } from "@/hooks/useUserData";
 import { parseUsdcInput } from "@/lib/format";
 
 export function DepositForm() {
   const [amount, setAmount] = useState("");
-  const { balance } = useUsdcBalance();
+  const { balance } = useUserData();
   const { deposit, isPending, isConfirming, needsApproval } = useDeposit();
 
   const parsedAmount = parseUsdcInput(amount);

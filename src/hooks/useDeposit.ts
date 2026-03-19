@@ -6,7 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { encodeFunctionData } from "viem";
 import { readContractQueryKey, readContractsQueryKey } from "wagmi/query";
 import { VAULT_ADDRESS, USDC_ADDRESS, erc20Abi, metaMorphoAbi } from "@/config/contracts";
-import { useAllowance } from "./useAllowance";
+import { useUserData } from "./useUserData";
 import { useToast } from "@/components/ui/ToastProvider";
 import { QUERY_KEYS } from "@/lib/constants";
 
@@ -29,7 +29,7 @@ const DEPOSIT_API_KEYS = [
 
 export function useDeposit() {
   const { address } = useAccount();
-  const { allowance } = useAllowance();
+  const { allowance } = useUserData();
   const { addToast, removeToast } = useToast();
   const queryClient = useQueryClient();
 

@@ -23,7 +23,7 @@ export function useVaultOnChain() {
       },
     ],
     query: {
-      refetchInterval: 15_000,
+      refetchInterval: 12_000,
       staleTime: 12_000,
     },
   });

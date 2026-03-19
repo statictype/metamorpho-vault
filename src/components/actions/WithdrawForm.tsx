@@ -4,14 +4,14 @@ import { useState } from "react";
 import { AmountInput } from "./AmountInput";
 import { ActionButton } from "./ActionButton";
 import { useWithdraw } from "@/hooks/useWithdraw";
-import { useUserPosition } from "@/hooks/useUserPosition";
+import { useUserData } from "@/hooks/useUserData";
 import { parseUsdcInput, formatUsdc } from "@/lib/format";
 import { formatUnits } from "viem";
 
 export function WithdrawForm() {
   const [amount, setAmount] = useState("");
   const { withdraw, isPending } = useWithdraw();
-  const { position } = useUserPosition();
+  const { position } = useUserData();
 
   const maxAssets = position?.assets ?? BigInt(0);
   const maxShares = position?.shares ?? BigInt(0);
