@@ -53,6 +53,7 @@ export default function SharePriceChartInner({ data }: { data: HistoricalDataPoi
           strokeWidth={2}
           dot={false}
           activeDot={{ r: 4, fill: "#3b82f6" }}
+          isAnimationActive={false}
         />
       </LineChart>
     </ResponsiveContainer>
