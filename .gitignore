@@ -42,3 +42,8 @@ next-env.d.ts
 
 # claude
 CLAUDE.md
+
+# lighthouse
+/.lighthouseci/
+/lighthouse-baseline/
+/lighthouse-post-migration/
