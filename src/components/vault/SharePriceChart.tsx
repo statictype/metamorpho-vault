@@ -42,8 +42,8 @@ export function SharePriceChart({ initialData, initialDataUpdatedAt }: Props) {
   if (isError || !data?.length) {
     return (
       <div className="rounded-xl border border-white/10 bg-white/5 p-6">
-        <h3 className="text-sm font-medium text-gray-400 mb-4">Share Price</h3>
-        <div className="h-64 flex items-center justify-center text-gray-500">
+        <h2 className="text-sm font-medium text-gray-400 mb-4">Share Price</h2>
+        <div className="h-64 flex items-center justify-center text-gray-400">
           Data unavailable
         </div>
       </div>
@@ -55,7 +55,7 @@ export function SharePriceChart({ initialData, initialDataUpdatedAt }: Props) {
   return (
     <div className="rounded-xl border border-white/10 bg-white/5 p-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-medium text-gray-400">Share Price</h3>
+        <h2 className="text-sm font-medium text-gray-400">Share Price</h2>
         <div className="flex gap-1">
           {(Object.keys(TIME_RANGES) as TimeRange[]).map((key) => (
             <button
@@ -64,7 +64,7 @@ export function SharePriceChart({ initialData, initialDataUpdatedAt }: Props) {
               className={`px-2 py-0.5 text-xs rounded transition-colors ${
                 range === key
                   ? "bg-blue-500/20 text-blue-400"
-                  : "text-gray-500 hover:text-gray-300"
+                  : "text-gray-400 hover:text-gray-300"
               }`}
             >
               {key}

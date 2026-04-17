@@ -14,7 +14,7 @@ export async function VaultAllocationsServer() {
 
   const serverHtml = (
     <div className="rounded-xl border border-white/10 bg-white/5 p-6">
-      <h3 className="text-sm font-medium text-gray-400 mb-4">Market Allocations</h3>
+      <h2 className="text-sm font-medium text-gray-400 mb-4">Market Allocations</h2>
       <div className="flex flex-col gap-3">
         {data.map((allocation) => {
           const pct = totalAllocation > 0
@@ -26,7 +26,7 @@ export async function VaultAllocationsServer() {
                 <span className="text-white">{allocation.label}</span>
                 <span className="text-gray-400">
                   {formatUsd(allocation.allocationUsd ?? 0)}
-                  <span className="text-gray-500 ml-2">{pct.toFixed(1)}%</span>
+                  <span className="text-gray-400 ml-2">{pct.toFixed(1)}%</span>
                 </span>
               </div>
               <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">

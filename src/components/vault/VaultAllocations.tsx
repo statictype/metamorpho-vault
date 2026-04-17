@@ -15,8 +15,8 @@ export function VaultAllocations({ initialData, initialDataUpdatedAt }: Props) {
   if (isError || !data?.length) {
     return (
       <div className="rounded-xl border border-white/10 bg-white/5 p-6">
-        <h3 className="text-sm font-medium text-gray-400 mb-4">Market Allocations</h3>
-        <div className="h-32 flex items-center justify-center text-gray-500">
+        <h2 className="text-sm font-medium text-gray-400 mb-4">Market Allocations</h2>
+        <div className="h-32 flex items-center justify-center text-gray-400">
           Data unavailable
         </div>
       </div>
@@ -40,7 +40,7 @@ export function VaultAllocations({ initialData, initialDataUpdatedAt }: Props) {
                 <span className="text-white">{allocation.label}</span>
                 <span className="text-gray-400">
                   {formatUsd(allocation.allocationUsd ?? 0)}
-                  <span className="text-gray-500 ml-2">{pct.toFixed(1)}%</span>
+                  <span className="text-gray-400 ml-2">{pct.toFixed(1)}%</span>
                 </span>
               </div>
               <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
