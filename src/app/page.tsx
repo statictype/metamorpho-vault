@@ -6,13 +6,11 @@ import { VaultHeaderServer } from "@/components/vault/VaultHeaderServer";
 import { VaultStatsServer } from "@/components/vault/VaultStatsServer";
 import { SharePriceChartServer } from "@/components/vault/SharePriceChartServer";
 import { VaultAllocationsServer } from "@/components/vault/VaultAllocationsServer";
-import { ActionPanel } from "@/components/actions/ActionPanel";
 import {
   HeaderSkeleton,
   ActionPanelSkeleton,
 } from "@/components/vault/skeletons";
 import { getStoredConnection } from "@/lib/stored-connection";
-import type { ReactNode } from "react";
 
 export default function Page() {
   return (
@@ -34,9 +32,7 @@ export default function Page() {
           </div>
           <div>
             <Suspense fallback={<ActionPanelSkeleton />}>
-              <InteractiveShellBoundary>
-                <ActionPanel />
-              </InteractiveShellBoundary>
+              <InteractiveShellBoundary />
             </Suspense>
           </div>
         </div>
@@ -55,11 +51,7 @@ async function HeaderBoundary() {
   );
 }
 
-async function InteractiveShellBoundary({ children }: { children: ReactNode }) {
+async function InteractiveShellBoundary() {
   const stored = await getStoredConnection();
-  return (
-    <InteractiveShell hasStoredConnection={stored.hasStoredConnection}>
-      {children}
-    </InteractiveShell>
-  );
+  return <InteractiveShell hasStoredConnection={stored.hasStoredConnection} />;
 }

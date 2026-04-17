@@ -1,24 +1,17 @@
 "use client";
 
-import {
-  useEffect,
-  useState,
-  type ComponentType,
-  type ReactNode,
-} from "react";
+import { useEffect, useState, type ComponentType } from "react";
 import { ActionPanelSkeleton } from "@/components/vault/skeletons";
 
 type Props = {
-  children: ReactNode;
   hasStoredConnection: boolean;
 };
 
 type WalletIslandProps = {
-  children: ReactNode;
   autoOpen?: boolean;
 };
 
-export function InteractiveShell({ children, hasStoredConnection }: Props) {
+export function InteractiveShell({ hasStoredConnection }: Props) {
   const [load, setLoad] = useState(hasStoredConnection);
   const [autoOpen, setAutoOpen] = useState(false);
   const [Loaded, setLoaded] =
@@ -36,7 +29,7 @@ export function InteractiveShell({ children, hasStoredConnection }: Props) {
   }, [load, Loaded]);
 
   if (Loaded) {
-    return <Loaded autoOpen={autoOpen}>{children}</Loaded>;
+    return <Loaded autoOpen={autoOpen} />;
   }
 
   if (hasStoredConnection) {
