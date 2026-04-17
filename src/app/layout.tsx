@@ -23,23 +23,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <head>
-        <link
-          rel="preconnect"
-          href="https://blue-api.morpho.org"
-          crossOrigin="anonymous"
-        />
-        <link
-          rel="preconnect"
-          href="https://eth-mainnet.g.alchemy.com"
-          crossOrigin="anonymous"
-        />
-        <link
-          rel="preconnect"
-          href="https://api.web3modal.org"
-          crossOrigin="anonymous"
-        />
-      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
