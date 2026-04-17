@@ -6,10 +6,7 @@ import { VaultHeaderServer } from "@/components/vault/VaultHeaderServer";
 import { VaultStatsServer } from "@/components/vault/VaultStatsServer";
 import { SharePriceChartServer } from "@/components/vault/SharePriceChartServer";
 import { VaultAllocationsServer } from "@/components/vault/VaultAllocationsServer";
-import {
-  HeaderSkeleton,
-  ActionPanelSkeleton,
-} from "@/components/vault/skeletons";
+import { HeaderSkeleton } from "@/components/vault/skeletons";
 import { getStoredConnection } from "@/lib/stored-connection";
 
 export default function Page() {
@@ -31,9 +28,7 @@ export default function Page() {
             <VaultAllocationsServer />
           </div>
           <div>
-            <Suspense fallback={<ActionPanelSkeleton />}>
-              <InteractiveShellBoundary />
-            </Suspense>
+            <InteractiveShell />
           </div>
         </div>
       </main>
@@ -51,7 +46,3 @@ async function HeaderBoundary() {
   );
 }
 
-async function InteractiveShellBoundary() {
-  const stored = await getStoredConnection();
-  return <InteractiveShell hasStoredConnection={stored.hasStoredConnection} />;
-}
