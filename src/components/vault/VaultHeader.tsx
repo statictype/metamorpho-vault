@@ -1,13 +1,12 @@
-import { VAULT_ADDRESS } from "@/config/contracts";
+import type { ReactNode } from "react";
+import { VAULT_ADDRESS, VAULT_NAME } from "@/config/contracts";
 import { shortenAddress } from "@/lib/format";
-import type { VaultApiData } from "@/types";
 
 type Props = {
-  name: string;
-  curator: VaultApiData["curator"];
+  curatorSlot?: ReactNode;
 };
 
-export function VaultHeader({ name, curator }: Props) {
+export function VaultHeader({ curatorSlot }: Props) {
   return (
     <div className="mb-6">
       <div className="flex items-center gap-3 mb-2">
@@ -15,9 +14,7 @@ export function VaultHeader({ name, curator }: Props) {
           $
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-white">
-            {name || "MetaMorpho Vault"}
-          </h1>
+          <h1 className="text-2xl font-bold text-white">{VAULT_NAME}</h1>
           <div className="flex items-center gap-2">
             <a
               href={`https://etherscan.io/address/${VAULT_ADDRESS}`}
@@ -27,11 +24,7 @@ export function VaultHeader({ name, curator }: Props) {
             >
               {shortenAddress(VAULT_ADDRESS)}
             </a>
-            {curator && (
-              <span className="text-xs bg-white/10 text-gray-300 px-2 py-0.5 rounded-full">
-                {curator.name}
-              </span>
-            )}
+            {curatorSlot}
           </div>
         </div>
       </div>

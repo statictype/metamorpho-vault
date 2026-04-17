@@ -1,4 +1,5 @@
 export const VAULT_ADDRESS = "0xBEEf3f3A04e28895f3D5163d910474901981183D" as const;
+export const VAULT_NAME = "3F x Steakhouse USDC";
 export const USDC_ADDRESS = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" as const;
 
 export const erc20Abi = [
