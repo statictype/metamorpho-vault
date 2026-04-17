@@ -63,7 +63,7 @@ function AddressPill({ address }: { address?: Address }) {
   return (
     <div
       aria-label="Wallet connected"
-      className="h-9 px-4 flex items-center rounded-lg bg-white/10 text-sm font-medium text-white"
+      className="h-9 px-4 flex items-center rounded-lg bg-white/10 hover:bg-white/15 text-sm font-medium text-white transition-colors"
     >
       {address ? shortenAddress(address) : "Connected"}
     </div>
