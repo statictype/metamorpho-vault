@@ -9,6 +9,11 @@ const WalletIsland = dynamic(
   { ssr: false, loading: () => <ActionPanelSkeleton /> }
 );
 
-export function InteractiveShell({ children }: { children: ReactNode }) {
+export function InteractiveShell({
+  children,
+}: {
+  children: ReactNode;
+  hasStoredConnection: boolean;
+}) {
   return <WalletIsland>{children}</WalletIsland>;
 }

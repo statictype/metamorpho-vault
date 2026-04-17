@@ -6,11 +6,17 @@ import { VaultStatsServer } from "@/components/vault/VaultStatsServer";
 import { SharePriceChartServer } from "@/components/vault/SharePriceChartServer";
 import { VaultAllocationsServer } from "@/components/vault/VaultAllocationsServer";
 import { ActionPanel } from "@/components/actions/ActionPanel";
+import { getStoredConnection } from "@/lib/stored-connection";
 
-export default function Page() {
+export default async function Page() {
+  const stored = await getStoredConnection();
+
   return (
     <QueryProvider>
-      <HeaderIsland />
+      <HeaderIsland
+        hasStoredConnection={stored.hasStoredConnection}
+        address={stored.address}
+      />
       <main className="max-w-6xl mx-auto px-4 py-8">
         <VaultHeaderServer />
 
@@ -24,7 +30,7 @@ export default function Page() {
             <VaultAllocationsServer />
           </div>
           <div>
-            <InteractiveShell>
+            <InteractiveShell hasStoredConnection={stored.hasStoredConnection}>
               <ActionPanel />
             </InteractiveShell>
           </div>
