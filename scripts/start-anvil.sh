@@ -19,4 +19,4 @@ if [ -z "$API_KEY" ]; then
 fi
 
 echo "Starting Anvil fork of Ethereum mainnet..."
-anvil --fork-url "https://eth-mainnet.g.alchemy.com/v2/$API_KEY" --chain-id 1
+anvil --fork-url "https://eth-mainnet.g.alchemy.com/v2/$API_KEY" --chain-id 31337

@@ -1,5 +1,5 @@
 import { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
-import { mainnet } from "@reown/appkit/networks";
+import { anvil, mainnet } from "@reown/appkit/networks";
 import type { AppKitNetwork } from "@reown/appkit/networks";
 import { cookieStorage, createStorage, http } from "wagmi";
 
@@ -13,7 +13,10 @@ if (!projectId) {
   throw new Error("NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID is not set");
 }
 
-export const networks: [AppKitNetwork, ...AppKitNetwork[]] = [mainnet];
+const isLocalRpc = /^(https?:\/\/)?(127\.0\.0\.1|localhost)/.test(rpcUrl);
+const chain = isLocalRpc ? anvil : mainnet;
+
+export const networks: [AppKitNetwork, ...AppKitNetwork[]] = [chain];
 
 export const wagmiAdapter = new WagmiAdapter({
   networks,
@@ -21,7 +24,7 @@ export const wagmiAdapter = new WagmiAdapter({
   ssr: true,
   storage: createStorage({ storage: cookieStorage }),
   transports: {
-    [mainnet.id]: http(rpcUrl),
+    [chain.id]: http(rpcUrl),
   },
 });
 
