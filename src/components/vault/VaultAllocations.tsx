@@ -1,20 +1,16 @@
 "use client";
 
 import { useVaultAllocations } from "@/hooks/useVaultAllocations";
-import { Skeleton } from "@/components/ui/Skeleton";
 import { formatUsd } from "@/lib/format";
+import type { VaultAllocation } from "@/types";
 
-export function VaultAllocations() {
-  const { data, isLoading, isError } = useVaultAllocations();
+type Props = {
+  initialData: VaultAllocation[];
+  initialDataUpdatedAt: number;
+};
 
-  if (isLoading) {
-    return (
-      <div className="rounded-xl border border-white/10 bg-white/5 p-6">
-        <h3 className="text-sm font-medium text-gray-400 mb-4">Market Allocations</h3>
-        <Skeleton className="h-32 w-full" />
-      </div>
-    );
-  }
+export function VaultAllocations({ initialData, initialDataUpdatedAt }: Props) {
+  const { data, isError } = useVaultAllocations({ initialData, initialDataUpdatedAt });
 
   if (isError || !data?.length) {
     return (

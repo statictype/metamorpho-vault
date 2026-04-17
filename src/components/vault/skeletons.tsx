@@ -24,16 +24,22 @@ export function VaultHeaderSkeleton() {
   );
 }
 
+function StatCardSkeleton() {
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+      <div className="h-4 w-16 bg-white/10 rounded animate-pulse mb-2" />
+      <div className="h-7 w-24 bg-white/10 rounded animate-pulse" />
+    </div>
+  );
+}
+
 export function VaultStatsSkeleton() {
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-      {Array.from({ length: 4 }).map((_, i) => (
-        <div key={i} className="rounded-xl border border-white/10 bg-white/5 p-4">
-          <div className="h-4 w-16 bg-white/10 rounded animate-pulse mb-2" />
-          <div className="h-7 w-24 bg-white/10 rounded animate-pulse" />
-        </div>
-      ))}
-    </div>
+    <>
+      <StatCardSkeleton />
+      <StatCardSkeleton />
+      <StatCardSkeleton />
+    </>
   );
 }
 
@@ -71,7 +77,9 @@ export function FullPageSkeleton() {
       <HeaderSkeleton />
       <main className="max-w-6xl mx-auto px-4 py-8">
         <VaultHeaderSkeleton />
-        <VaultStatsSkeleton />
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+          <VaultStatsSkeleton />
+        </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
           <div className="lg:col-span-2 flex flex-col gap-6">
             <SharePriceChartSkeleton />

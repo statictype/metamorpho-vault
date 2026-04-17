@@ -1,13 +1,13 @@
-"use client";
-
 import { VAULT_ADDRESS } from "@/config/contracts";
 import { shortenAddress } from "@/lib/format";
-import { useVaultApi } from "@/hooks/useVaultApi";
-import { Skeleton } from "@/components/ui/Skeleton";
+import type { VaultApiData } from "@/types";
 
-export function VaultHeader() {
-  const { data, isLoading } = useVaultApi();
+type Props = {
+  name: string;
+  curator: VaultApiData["curator"];
+};
 
+export function VaultHeader({ name, curator }: Props) {
   return (
     <div className="mb-6">
       <div className="flex items-center gap-3 mb-2">
@@ -15,13 +15,9 @@ export function VaultHeader() {
           $
         </div>
         <div>
-          {isLoading ? (
-            <Skeleton className="h-7 w-48 mb-1" />
-          ) : (
-            <h1 className="text-2xl font-bold text-white">
-              {data?.name || "MetaMorpho Vault"}
-            </h1>
-          )}
+          <h1 className="text-2xl font-bold text-white">
+            {name || "MetaMorpho Vault"}
+          </h1>
           <div className="flex items-center gap-2">
             <a
               href={`https://etherscan.io/address/${VAULT_ADDRESS}`}
@@ -31,9 +27,9 @@ export function VaultHeader() {
             >
               {shortenAddress(VAULT_ADDRESS)}
             </a>
-            {data?.curator && (
+            {curator && (
               <span className="text-xs bg-white/10 text-gray-300 px-2 py-0.5 rounded-full">
-                {data.curator.name}
+                {curator.name}
               </span>
             )}
           </div>

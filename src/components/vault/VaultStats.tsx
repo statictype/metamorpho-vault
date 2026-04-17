@@ -1,59 +1,41 @@
 "use client";
 
 import { StatCard } from "./StatCard";
-import { useVaultOnChain } from "@/hooks/useVaultOnChain";
 import { useVaultApi } from "@/hooks/useVaultApi";
-import { formatUsd, formatUsdc, formatPercent } from "@/lib/format";
-import { formatUnits } from "viem";
+import { formatUsd, formatPercent } from "@/lib/format";
+import type { VaultApiData } from "@/types";
 
-export function VaultStats() {
-  const onChain = useVaultOnChain();
-  const api = useVaultApi();
+type Props = {
+  initialData: VaultApiData;
+  initialDataUpdatedAt: number;
+};
 
-  const tvlDisplay = onChain.totalAssets
-    ? formatUsdc(onChain.totalAssets) + " USDC"
-    : undefined;
-
-  const tvlUsd = api.data ? formatUsd(api.data.totalAssetsUsd) : undefined;
+export function VaultStats({ initialData, initialDataUpdatedAt }: Props) {
+  const api = useVaultApi({ initialData, initialDataUpdatedAt });
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <>
       <StatCard
         label="TVL"
-        value={tvlUsd ?? tvlDisplay ?? ""}
-        subValue={tvlUsd && tvlDisplay ? tvlDisplay : undefined}
-        isLoading={onChain.isLoading && api.isLoading}
-        isError={onChain.isError && api.isError}
-        onRetry={() => { onChain.refetch(); api.refetch(); }}
+        value={api.data ? formatUsd(api.data.totalAssetsUsd) : ""}
+        isLoading={!api.data}
+        isError={api.isError}
+        onRetry={api.refetch}
       />
       <StatCard
         label="Net APY"
         value={api.data ? formatPercent(api.data.avgNetApy) : ""}
-        isLoading={api.isLoading}
+        isLoading={!api.data}
         isError={api.isError}
         onRetry={api.refetch}
       />
       <StatCard
         label="Available Liquidity"
         value={api.data ? formatUsd(api.data.liquidityUsd) : ""}
-        isLoading={api.isLoading}
+        isLoading={!api.data}
         isError={api.isError}
         onRetry={api.refetch}
       />
-      <StatCard
-        label="Total Supply"
-        value={
-          onChain.totalSupply
-            ? Number(formatUnits(onChain.totalSupply, 18)).toLocaleString("en-US", {
-                maximumFractionDigits: 2,
-              })
-            : ""
-        }
-        suffix="shares"
-        isLoading={onChain.isLoading}
-        isError={onChain.isError}
-        onRetry={onChain.refetch}
-      />
-    </div>
+    </>
   );
 }
