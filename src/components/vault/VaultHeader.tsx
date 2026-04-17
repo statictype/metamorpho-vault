@@ -20,7 +20,7 @@ export function VaultHeader({ curatorSlot }: Props) {
               href={`https://etherscan.io/address/${VAULT_ADDRESS}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm text-gray-400 hover:text-gray-300 font-mono"
+              className="text-sm text-gray-400 hover:text-gray-300"
             >
               {shortenAddress(VAULT_ADDRESS)}
             </a>
