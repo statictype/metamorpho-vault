@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { ClientShell } from "./client-shell";
+import { InteractiveShell } from "./interactive-shell";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,7 +28,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ClientShell>{children}</ClientShell>
+        <InteractiveShell>{children}</InteractiveShell>
       </body>
     </html>
   );

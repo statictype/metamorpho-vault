@@ -2,20 +2,16 @@
 
 import { useState } from "react";
 import { AmountInput } from "./AmountInput";
-import { ActionButton } from "./ActionButton";
-import { useWithdraw } from "@/hooks/useWithdraw";
+import { WithdrawSubmit } from "./WithdrawSubmit";
 import { useUserData } from "@/hooks/useUserData";
 import { parseUsdcInput, formatUsdc } from "@/lib/format";
 import { formatUnits } from "viem";
 
 export function WithdrawForm() {
   const [amount, setAmount] = useState("");
-  const { withdraw, isPending } = useWithdraw();
   const { position } = useUserData();
 
   const maxAssets = position?.assets ?? BigInt(0);
-  const maxShares = position?.shares ?? BigInt(0);
-
   const parsedAmount = parseUsdcInput(amount);
 
   const validationError =
@@ -24,20 +20,6 @@ export function WithdrawForm() {
       : parsedAmount > maxAssets
         ? "Exceeds your position"
         : undefined;
-
-  const handleSubmit = async () => {
-    if (!parsedAmount || validationError || maxAssets === BigInt(0)) return;
-
-    // Convert assets amount to shares proportionally
-    // shares = (inputAssets * totalShares) / totalAssets
-    const sharesToRedeem =
-      parsedAmount >= maxAssets
-        ? maxShares
-        : (parsedAmount * maxShares) / maxAssets;
-
-    const submitted = await withdraw(sharesToRedeem);
-    if (submitted) setAmount("");
-  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -48,7 +30,6 @@ export function WithdrawForm() {
           maxAmount={maxAssets}
           tokenSymbol="USDC"
           label="Withdraw amount"
-          disabled={isPending}
         />
         {position && position.shares > BigInt(0) && (
           <p className="text-xs text-gray-500 mt-2">
@@ -60,13 +41,11 @@ export function WithdrawForm() {
           </p>
         )}
       </div>
-      <ActionButton
-        onClick={handleSubmit}
-        disabled={!!validationError}
-        isPending={isPending}
-        label="Withdraw"
-        pendingLabel="Withdrawing..."
+      <WithdrawSubmit
+        parsedAmount={parsedAmount}
         validationError={validationError}
+        position={position}
+        onSuccess={() => setAmount("")}
       />
     </div>
   );

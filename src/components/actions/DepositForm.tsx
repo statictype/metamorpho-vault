@@ -2,15 +2,13 @@
 
 import { useState } from "react";
 import { AmountInput } from "./AmountInput";
-import { ActionButton } from "./ActionButton";
-import { useDeposit } from "@/hooks/useDeposit";
+import { DepositSubmit } from "./DepositSubmit";
 import { useUserData } from "@/hooks/useUserData";
 import { parseUsdcInput } from "@/lib/format";
 
 export function DepositForm() {
   const [amount, setAmount] = useState("");
   const { balance } = useUserData();
-  const { deposit, isPending, isConfirming, needsApproval } = useDeposit();
 
   const parsedAmount = parseUsdcInput(amount);
 
@@ -21,21 +19,6 @@ export function DepositForm() {
         ? "Insufficient USDC balance"
         : undefined;
 
-  const buttonLabel =
-    !parsedAmount
-      ? "Enter an amount"
-      : needsApproval(parsedAmount)
-        ? "Approve & Deposit"
-        : "Deposit";
-
-  const pendingLabel = isConfirming ? "Confirming..." : "Depositing...";
-
-  const handleSubmit = async () => {
-    if (!parsedAmount || validationError) return;
-    const submitted = await deposit(parsedAmount);
-    if (submitted) setAmount("");
-  };
-
   return (
     <div className="flex flex-col gap-4">
       <AmountInput
@@ -44,15 +27,11 @@ export function DepositForm() {
         maxAmount={balance}
         tokenSymbol="USDC"
         label="Deposit amount"
-        disabled={isPending}
       />
-      <ActionButton
-        onClick={handleSubmit}
-        disabled={!!validationError}
-        isPending={isPending}
-        label={buttonLabel}
-        pendingLabel={pendingLabel}
+      <DepositSubmit
+        parsedAmount={parsedAmount}
         validationError={validationError}
+        onSuccess={() => setAmount("")}
       />
     </div>
   );

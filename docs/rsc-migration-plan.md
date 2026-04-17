@@ -114,8 +114,9 @@ Commit `65673a5` moved `Providers` behind `dynamic(..., { ssr: false })` because
 
 ## Rules Claude must follow when executing this plan
 
-- **Stop after each commit** and wait for review before moving to the next. The user reviews incrementally.
-- **Commit messages**: neutral, present tense, no references to the take-home challenge or to "migration". Example: `Enable Cache Components and add server-side Morpho fetch layer`, not `Phase 1: migrate to SSR`.
+- **Stop after each step** and wait for review before moving to the next. The user reviews incrementally.
+- **Do not commit intermediate steps.** The whole migration lands as a single commit once all steps are reviewed and the final verification checklist passes. The "Commit N" section headings below are review boundaries, not commit boundaries — treat them as steps.
+- **Final commit message**: neutral, present tense, no references to the take-home challenge or to the word "migration". Something like `Move public vault view to server-rendered App Router with streaming`.
 - **Do not add** `useMemo`, `useCallback`, or `React.memo`. The React Compiler handles memoization.
 - **All writes** must go through `useSendCalls` / `sendCallsAsync`. Never `useWriteContract`.
 - **Cache invalidation after transactions**: keep the existing targeted approach using wagmi's `readContractQueryKey` / `readContractsQueryKey` from `wagmi/query` and `QUERY_KEYS` from `src/lib/constants.ts`. Do not replace with blanket refetches.
@@ -277,9 +278,9 @@ Considered. The `initialData` pattern is kept because:
 
 ---
 
-## Commit sequence
+## Step sequence
 
-Each commit is independently deployable, keeps `pnpm build` + `pnpm test` green, and is reviewed before the next begins.
+> **Note on terminology.** The sections below are labelled "Commit N" for historical reasons; they are **review steps**, not commits. The whole migration lands as one commit at the end. Each step still must keep `pnpm build` + `pnpm test` green so the user can review an intermediate working state; they simply aren't committed individually.
 
 ### Commit 1 — Enable Cache Components and add server fetch layer
 

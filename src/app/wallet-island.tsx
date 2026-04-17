@@ -8,7 +8,7 @@ import "@rainbow-me/rainbowkit/styles.css";
 import { config } from "@/config/wagmi";
 import { ToastProvider } from "@/components/ui/ToastProvider";
 
-export function Providers({ children }: { children: ReactNode }) {
+export function WalletIsland({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
     () =>
       new QueryClient({
