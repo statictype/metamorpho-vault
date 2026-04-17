@@ -11,30 +11,27 @@ type Props = {
 };
 
 export function VaultStats({ initialData, initialDataUpdatedAt }: Props) {
-  const api = useVaultApi({ initialData, initialDataUpdatedAt });
+  const { data, isError, refetch } = useVaultApi({ initialData, initialDataUpdatedAt });
 
   return (
     <>
       <StatCard
         label="TVL"
-        value={api.data ? formatUsd(api.data.totalAssetsUsd) : ""}
-        isLoading={!api.data}
-        isError={api.isError}
-        onRetry={api.refetch}
+        value={data ? formatUsd(data.totalAssetsUsd) : ""}
+        isError={isError}
+        onRetry={refetch}
       />
       <StatCard
         label="Net APY"
-        value={api.data ? formatPercent(api.data.avgNetApy) : ""}
-        isLoading={!api.data}
-        isError={api.isError}
-        onRetry={api.refetch}
+        value={data ? formatPercent(data.avgNetApy) : ""}
+        isError={isError}
+        onRetry={refetch}
       />
       <StatCard
         label="Available Liquidity"
-        value={api.data ? formatUsd(api.data.liquidityUsd) : ""}
-        isLoading={!api.data}
-        isError={api.isError}
-        onRetry={api.refetch}
+        value={data ? formatUsd(data.liquidityUsd) : ""}
+        isError={isError}
+        onRetry={refetch}
       />
     </>
   );
