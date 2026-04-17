@@ -12,7 +12,8 @@
     "lh": "next build && lhci autorun"
   },
   "dependencies": {
-    "@rainbow-me/rainbowkit": "^2.2.10",
+    "@reown/appkit": "^1.8.19",
+    "@reown/appkit-adapter-wagmi": "^1.8.19",
     "@tanstack/react-query": "^5.91.0",
     "next": "16.1.7",
     "react": "19.2.3",

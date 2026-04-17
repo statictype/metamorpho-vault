@@ -1,7 +1,7 @@
 "use client";
 
 import { useAccount } from "wagmi";
-import { useConnectModal } from "@rainbow-me/rainbowkit";
+import { useAppKit } from "@reown/appkit/react";
 
 interface ActionButtonProps {
   onClick: () => void;
@@ -21,13 +21,13 @@ export function ActionButton({
   validationError,
 }: ActionButtonProps) {
   const { isConnected } = useAccount();
-  const { openConnectModal } = useConnectModal();
+  const { open } = useAppKit();
 
   if (!isConnected) {
     return (
       <button
         type="button"
-        onClick={() => openConnectModal?.()}
+        onClick={() => open()}
         className="w-full py-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium transition-colors"
       >
         Connect Wallet

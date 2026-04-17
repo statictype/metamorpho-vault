@@ -1,23 +1,15 @@
 "use client";
 
+import "@/config/appkit";
 import type { ReactNode } from "react";
 import { WagmiProvider } from "wagmi";
-import { RainbowKitProvider, darkTheme } from "@rainbow-me/rainbowkit";
-import "@rainbow-me/rainbowkit/styles.css";
 import { config } from "@/config/wagmi";
 import { ToastProvider } from "@/components/ui/ToastProvider";
 
 export function WalletIsland({ children }: { children: ReactNode }) {
   return (
     <WagmiProvider config={config}>
-      <RainbowKitProvider
-        theme={darkTheme({
-          accentColor: "#3b82f6",
-          borderRadius: "medium",
-        })}
-      >
-        <ToastProvider>{children}</ToastProvider>
-      </RainbowKitProvider>
+      <ToastProvider>{children}</ToastProvider>
     </WagmiProvider>
   );
 }

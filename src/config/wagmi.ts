@@ -1,17 +1,27 @@
-import { getDefaultConfig } from "@rainbow-me/rainbowkit";
+import { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
+import { mainnet } from "@reown/appkit/networks";
+import type { AppKitNetwork } from "@reown/appkit/networks";
 import { http } from "wagmi";
-import { mainnet } from "wagmi/chains";
 
 const rpcUrl =
   process.env.NEXT_PUBLIC_RPC_URL ||
   `https://eth-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`;
 
-export const config = getDefaultConfig({
-  appName: "MetaMorpho Vault",
-  projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "placeholder",
-  chains: [mainnet],
+export const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
+
+if (!projectId) {
+  throw new Error("NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID is not set");
+}
+
+export const networks: [AppKitNetwork, ...AppKitNetwork[]] = [mainnet];
+
+export const wagmiAdapter = new WagmiAdapter({
+  networks,
+  projectId,
+  ssr: true,
   transports: {
     [mainnet.id]: http(rpcUrl),
   },
-  ssr: true,
 });
+
+export const config = wagmiAdapter.wagmiConfig;
