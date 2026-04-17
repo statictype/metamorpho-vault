@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { QueryProvider } from "./query-provider";
 import { HeaderIsland } from "./header-island";
 import { InteractiveShell } from "./interactive-shell";
@@ -6,17 +7,19 @@ import { VaultStatsServer } from "@/components/vault/VaultStatsServer";
 import { SharePriceChartServer } from "@/components/vault/SharePriceChartServer";
 import { VaultAllocationsServer } from "@/components/vault/VaultAllocationsServer";
 import { ActionPanel } from "@/components/actions/ActionPanel";
+import {
+  HeaderSkeleton,
+  ActionPanelSkeleton,
+} from "@/components/vault/skeletons";
 import { getStoredConnection } from "@/lib/stored-connection";
+import type { ReactNode } from "react";
 
-export default async function Page() {
-  const stored = await getStoredConnection();
-
+export default function Page() {
   return (
     <QueryProvider>
-      <HeaderIsland
-        hasStoredConnection={stored.hasStoredConnection}
-        address={stored.address}
-      />
+      <Suspense fallback={<HeaderSkeleton />}>
+        <HeaderBoundary />
+      </Suspense>
       <main className="max-w-6xl mx-auto px-4 py-8">
         <VaultHeaderServer />
 
@@ -30,12 +33,33 @@ export default async function Page() {
             <VaultAllocationsServer />
           </div>
           <div>
-            <InteractiveShell hasStoredConnection={stored.hasStoredConnection}>
-              <ActionPanel />
-            </InteractiveShell>
+            <Suspense fallback={<ActionPanelSkeleton />}>
+              <InteractiveShellBoundary>
+                <ActionPanel />
+              </InteractiveShellBoundary>
+            </Suspense>
           </div>
         </div>
       </main>
     </QueryProvider>
+  );
+}
+
+async function HeaderBoundary() {
+  const stored = await getStoredConnection();
+  return (
+    <HeaderIsland
+      hasStoredConnection={stored.hasStoredConnection}
+      address={stored.address}
+    />
+  );
+}
+
+async function InteractiveShellBoundary({ children }: { children: ReactNode }) {
+  const stored = await getStoredConnection();
+  return (
+    <InteractiveShell hasStoredConnection={stored.hasStoredConnection}>
+      {children}
+    </InteractiveShell>
   );
 }
