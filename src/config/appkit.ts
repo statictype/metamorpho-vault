@@ -19,4 +19,8 @@ createAppKit({
     socials: false,
   },
   themeMode: "dark",
+  themeVariables: {
+    "--w3m-font-family":
+      "var(--font-geist-sans), system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
+  },
 });
